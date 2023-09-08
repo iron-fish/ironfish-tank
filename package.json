@@ -6,7 +6,9 @@
   "author": "Iron Fish <contact@ironfish.network> (https://ironfish.network)",
   "license": "MPL-2.0",
   "workspaces": [
-    "simulator"
+    "fishtank",
+    "fishtank-cli",
+    "scenarios"
   ],
   "scripts": {
     "build": "lerna run build",
@@ -21,6 +23,7 @@
     "typecheck:changed": "lerna exec --since origin/master --include-dependents -- tsc --noEmit"
   },
   "devDependencies": {
+    "@ironfish/sdk": "1.9.0",
     "@types/jest": "29.2.4",
     "@typescript-eslint/eslint-plugin": "4.28.1",
     "@typescript-eslint/parser": "4.28.1",

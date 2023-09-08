@@ -1,13 +1,13 @@
 {
-  "name": "simulator",
+  "name": "fishtank-cli",
   "version": "0.1.0",
-  "description": "CLI for running simulations of Ironfish networks",
+  "description": "CLI for running simulations of Iron Fish networks",
   "author": "Iron Fish <contact@ironfish.network> (https://ironfish.network)",
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iron-fish/ironfish.git"
+    "url": "git+https://github.com/iron-fish/ironfish-tank.git"
   },
   "license": "MPL-2.0",
   "files": [
@@ -23,12 +23,12 @@
     "node": "18.x"
   },
   "dependencies": {
-    "@ironfish/sdk": "1.9.0",
     "@oclif/core": "1.23.1",
     "@oclif/plugin-help": "5.1.12",
     "@oclif/plugin-not-found": "2.3.1",
     "@types/tar": "6.1.1",
     "chalk": "^4",
+    "fishtank": "0.1.0",
     "yup": "0.29.3"
   },
   "devDependencies": {
@@ -77,7 +77,7 @@
     "topics": {}
   },
   "bugs": {
-    "url": "https://github.com/iron-fish/ironfish/issues"
+    "url": "https://github.com/iron-fish/ironfish-tank/issues"
   },
   "homepage": "https://ironfish.network"
 }

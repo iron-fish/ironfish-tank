@@ -1,6 +1,8 @@
 {
   "packages": [
-    "simulator"
+    "fishtank",
+    "fishtank-cli",
+    "scenarios"
   ],
   "version": "independent",
   "npmClient": "yarn",
