@@ -1,0 +1,8 @@
+{
+  "packages": [
+    "simulator"
+  ],
+  "version": "independent",
+  "npmClient": "yarn",
+  "useWorkspaces": true
+}
