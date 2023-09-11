@@ -70,6 +70,49 @@ describe('Docker Backend', () => {
     })
   })
 
+  describe('remove', () => {
+    it('removes the specified containers', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.remove(['container-1', 'container-2', 'container-3'])
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['rm', 'container-1', 'container-2', 'container-3'],
+        {},
+      )
+    })
+
+    it('forcefully removes the specified containers', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.remove(['container-1', 'container-2', 'container-3'], { force: true })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['rm', '--force', 'container-1', 'container-2', 'container-3'],
+        {},
+      )
+    })
+
+    it('removes the specified containers and their volumes', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.remove(['container-1', 'container-2', 'container-3'], { volumes: true })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['rm', '--volumes', 'container-1', 'container-2', 'container-3'],
+        {},
+      )
+    })
+
+    it('does not do anything if no identifiers are passed', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.remove([])
+      expect(docker['cmd']).not.toHaveBeenCalled()
+    })
+  })
+
   describe('createNetwork', () => {
     it('creates a network with the bridge driver', async () => {
       const docker = new Docker()

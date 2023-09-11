@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { Docker } from './backend'
+import { Node } from './node'
 
 export const DEFAULT_IMAGE = 'ironfish:latest'
 
@@ -27,11 +28,12 @@ export class Cluster {
     return this.backend.createNetwork(this.networkName(), { attachable: true, internal: true })
   }
 
-  async spawn(options: { name: string; image?: string }): Promise<void> {
+  async spawn(options: { name: string; image?: string }): Promise<Node> {
     const name = this.containerName(options.name)
-    return this.backend.runDetached(options.image ?? DEFAULT_IMAGE, {
+    await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, {
       name,
       networks: [this.networkName()],
     })
+    return new Node(this, name)
   }
 }

@@ -84,6 +84,24 @@ export class Docker {
     await this.cmd(runArgs, {})
   }
 
+  async remove(
+    containers: string[],
+    options?: { force?: boolean; volumes?: boolean },
+  ): Promise<void> {
+    if (containers.length === 0) {
+      return
+    }
+    const rmArgs = ['rm']
+    if (options?.force) {
+      rmArgs.push('--force')
+    }
+    if (options?.volumes) {
+      rmArgs.push('--volumes')
+    }
+    rmArgs.push(...containers)
+    await this.cmd(rmArgs, {})
+  }
+
   async createNetwork(
     name: string,
     options?: { driver?: string; attachable?: boolean; internal?: boolean },
