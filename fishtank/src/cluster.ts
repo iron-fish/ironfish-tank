@@ -15,12 +15,23 @@ export class Cluster {
     this.backend = options.backend ?? new Docker()
   }
 
+  private networkName(): string {
+    return this.name
+  }
+
   private containerName(name: string): string {
     return `${this.name}_${name}`
   }
 
+  async init(): Promise<void> {
+    return this.backend.createNetwork(this.networkName(), { attachable: true, internal: true })
+  }
+
   async spawn(options: { name: string; image?: string }): Promise<void> {
     const name = this.containerName(options.name)
-    return this.backend.runDetached(options.image ?? DEFAULT_IMAGE, { name })
+    return this.backend.runDetached(options.image ?? DEFAULT_IMAGE, {
+      name,
+      networks: [this.networkName()],
+    })
   }
 }

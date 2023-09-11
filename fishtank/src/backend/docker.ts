@@ -83,4 +83,20 @@ export class Docker {
     }
     await this.cmd(runArgs, {})
   }
+
+  async createNetwork(
+    name: string,
+    options?: { driver?: string; attachable?: boolean; internal?: boolean },
+  ): Promise<void> {
+    const createArgs = ['network', 'create']
+    createArgs.push('--driver', options?.driver ?? 'bridge')
+    if (options?.attachable) {
+      createArgs.push('--attachable')
+    }
+    if (options?.internal) {
+      createArgs.push('--internal')
+    }
+    createArgs.push(name)
+    await this.cmd(createArgs, {})
+  }
 }

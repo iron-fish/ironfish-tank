@@ -69,4 +69,50 @@ describe('Docker Backend', () => {
       )
     })
   })
+
+  describe('createNetwork', () => {
+    it('creates a network with the bridge driver', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.createNetwork('a-test-network')
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['network', 'create', '--driver', 'bridge', 'a-test-network'],
+        {},
+      )
+    })
+
+    it('creates a network with the given driver', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.createNetwork('a-test-network', { driver: 'foo' })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['network', 'create', '--driver', 'foo', 'a-test-network'],
+        {},
+      )
+    })
+
+    it('creates an attachable network', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.createNetwork('a-test-network', { attachable: true })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['network', 'create', '--driver', 'bridge', '--attachable', 'a-test-network'],
+        {},
+      )
+    })
+
+    it('creates an internal network', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.createNetwork('a-test-network', { internal: true })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['network', 'create', '--driver', 'bridge', '--internal', 'a-test-network'],
+        {},
+      )
+    })
+  })
 })

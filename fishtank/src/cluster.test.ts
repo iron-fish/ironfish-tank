@@ -16,6 +16,7 @@ describe('Cluster', () => {
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
+        networks: ['my-test-cluster'],
       })
     })
   })
