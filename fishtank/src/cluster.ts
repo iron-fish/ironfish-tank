@@ -36,4 +36,19 @@ export class Cluster {
     })
     return new Node(this, name)
   }
+
+  async teardown(): Promise<void> {
+    // Remove containers
+    const removeContainers = []
+    const namePrefix = this.containerName('')
+    for (const container of await this.backend.list()) {
+      if (container.name.startsWith(namePrefix)) {
+        removeContainers.push(container.name)
+      }
+    }
+    await this.backend.remove(removeContainers, { force: true, volumes: true })
+
+    // Remove networks
+    await this.backend.removeNetworks([this.networkName()], { force: true })
+  }
 }

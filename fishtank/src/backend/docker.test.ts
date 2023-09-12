@@ -70,6 +70,35 @@ describe('Docker Backend', () => {
     })
   })
 
+  describe('list', () => {
+    it('returns information about all containers', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn().mockReturnValue({
+        stdout:
+          '{"Command":"...","CreatedAt":"2023-08-10 12:02:39 -0700 PDT","ID":"b0a1425e5e9f56746826fa9e037e5cc4eb2e472a0cd5a0bbedfffd55de0415b5","Image":"ironfish:latest","LocalVolumes":"1","Mounts":"b7ae1c8b5a1a3cc3428ee5a39c358f12bc0ec263a6a8feff3fbb0a4d91fee84d","Names":"test-cluster_test-node","Networks":"test_cluster","Ports":"","RunningFor":"4 weeks ago","Size":"0B","State":"exited","Status":"Exited (0) 4 weeks ago"}\n' +
+          '{"Command":"...","CreatedAt":"2023-08-10 12:02:39 -0700 PDT","ID":"02dbd848851d3e276980a5a014f5371b0e32b46e4b3a09c5b3219daccb5dd552","Image":"ironfish:1.3.2","LocalVolumes":"1","Mounts":"800c9adead7f30ef6748bcb641951a699aa586eca280b7f7da5e07fe68ac703e","Names":"test-cluster_bootstrap-node","Networks":"test_cluster","Ports":"","RunningFor":"4 weeks ago","Size":"0B","State":"exited","Status":"Exited (0) 4 weeks ago"}\n',
+      })
+
+      const containers = await docker.list()
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['ps', '--no-trunc', '--all', '--format=json'],
+        {},
+      )
+      expect(containers).toEqual([
+        {
+          id: 'b0a1425e5e9f56746826fa9e037e5cc4eb2e472a0cd5a0bbedfffd55de0415b5',
+          name: 'test-cluster_test-node',
+          image: 'ironfish:latest',
+        },
+        {
+          id: '02dbd848851d3e276980a5a014f5371b0e32b46e4b3a09c5b3219daccb5dd552',
+          name: 'test-cluster_bootstrap-node',
+          image: 'ironfish:1.3.2',
+        },
+      ])
+    })
+  })
+
   describe('remove', () => {
     it('removes the specified containers', async () => {
       const docker = new Docker()
@@ -156,6 +185,38 @@ describe('Docker Backend', () => {
         ['network', 'create', '--driver', 'bridge', '--internal', 'a-test-network'],
         {},
       )
+    })
+  })
+
+  describe('networkRemove', () => {
+    it('removes the specified networks', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.removeNetworks(['network-1', 'network-2', 'network-3'])
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['network', 'remove', 'network-1', 'network-2', 'network-3'],
+        {},
+      )
+    })
+
+    it('forcefully removes the specified networks', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.removeNetworks(['network-1', 'network-2', 'network-3'], { force: true })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['network', 'remove', '--force', 'network-1', 'network-2', 'network-3'],
+        {},
+      )
+    })
+
+    it('does not do anything if no identifiers are passed', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.removeNetworks([])
+      expect(docker['cmd']).not.toHaveBeenCalled()
     })
   })
 })

@@ -43,6 +43,8 @@ export class DockerError extends Error {
   }
 }
 
+export type ContainerDetails = { id: string; name: string; image: string }
+
 export class Docker {
   private readonly executable: string
 
@@ -84,6 +86,23 @@ export class Docker {
     await this.cmd(runArgs, {})
   }
 
+  async list(): Promise<ContainerDetails[]> {
+    const containers = []
+    const { stdout } = await this.cmd(['ps', '--no-trunc', '--all', '--format=json'], {})
+    for (const line of stdout.split(/\r?\n/)) {
+      if (!line) {
+        continue
+      }
+      const info = JSON.parse(line) as { ID: string; Names: string; Image: string }
+      containers.push({
+        id: info['ID'],
+        name: info['Names'],
+        image: info['Image'],
+      })
+    }
+    return containers
+  }
+
   async remove(
     containers: string[],
     options?: { force?: boolean; volumes?: boolean },
@@ -116,5 +135,17 @@ export class Docker {
     }
     createArgs.push(name)
     await this.cmd(createArgs, {})
+  }
+
+  async removeNetworks(networks: string[], options?: { force?: boolean }): Promise<void> {
+    if (networks.length === 0) {
+      return
+    }
+    const removeArgs = ['network', 'remove']
+    if (options?.force) {
+      removeArgs.push('--force')
+    }
+    removeArgs.push(...networks)
+    await this.cmd(removeArgs, {})
   }
 }

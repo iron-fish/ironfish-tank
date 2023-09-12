@@ -20,4 +20,31 @@ describe('Cluster', () => {
       })
     })
   })
+
+  describe('teardown', () => {
+    it('removes all resources created by the cluster', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const list = jest.spyOn(backend, 'list').mockReturnValue(
+        Promise.resolve([
+          { id: 'aaaa', name: 'my-test-cluster_node-1', image: 'img' },
+          { id: 'bbbb', name: 'my-test-cluster_node-2', image: 'img' },
+          { id: 'cccc', name: 'my-test-cluster_node-3', image: 'img' },
+          { id: 'dddd', name: 'another-container', image: 'img' },
+          { id: 'eeee', name: 'yet-another-container', image: 'img' },
+        ]),
+      )
+
+      const remove = jest.spyOn(backend, 'remove').mockReturnValue(Promise.resolve())
+
+      await cluster.teardown()
+
+      expect(list).toHaveBeenCalled()
+      expect(remove).toHaveBeenCalledWith(
+        ['my-test-cluster_node-1', 'my-test-cluster_node-2', 'my-test-cluster_node-3'],
+        { force: true, volumes: true },
+      )
+    })
+  })
 })
