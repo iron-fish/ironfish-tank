@@ -13,6 +13,7 @@
   "scripts": {
     "build": "lerna run build",
     "build:changed": "lerna run --since origin/master --include-dependents build",
+    "start": "cd fishtank-cli && yarn start",
     "clean": "lerna run clean && lerna exec -- rm -rf ./build",
     "lint": "lerna run lint -- --max-warnings=0",
     "lint:changed": "lerna run --since origin/master --include-dependents lint",

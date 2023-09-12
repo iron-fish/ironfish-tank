@@ -4,14 +4,14 @@
 import { Command, Config } from '@oclif/core'
 import { Cluster } from 'fishtank'
 
-export abstract class Start extends Command {
-  static description = 'Spin up a new cluster'
+export abstract class Stop extends Command {
+  static description = 'Removes all resources associated to a cluster'
 
   static args = [
     {
       name: 'name',
       required: true,
-      description: 'The name of the cluster to create',
+      description: 'The name of the cluster to stop',
     },
   ]
 
@@ -20,9 +20,9 @@ export abstract class Start extends Command {
   }
 
   async run(): Promise<void> {
-    const { args } = await this.parse(Start)
+    const { args } = await this.parse(Stop)
     const clusterName = args.name as string
     const cluster = new Cluster({ name: clusterName })
-    return cluster.init()
+    return cluster.teardown()
   }
 }
