@@ -68,7 +68,12 @@ export class Docker {
 
   async runDetached(
     image: string,
-    options?: { args?: readonly string[]; name?: string; networks?: readonly string[] },
+    options?: {
+      args?: readonly string[]
+      name?: string
+      networks?: readonly string[]
+      hostname?: string
+    },
   ): Promise<void> {
     const runArgs = ['run', '--quiet', '--detach']
     if (options?.name) {
@@ -78,6 +83,9 @@ export class Docker {
       for (const network of options.networks) {
         runArgs.push('--network', network)
       }
+    }
+    if (options?.hostname) {
+      runArgs.push('--hostname', options.hostname)
     }
     runArgs.push(image)
     if (options?.args) {

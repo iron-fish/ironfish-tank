@@ -29,12 +29,13 @@ export class Cluster {
   }
 
   async spawn(options: { name: string; image?: string }): Promise<Node> {
-    const name = this.containerName(options.name)
+    const containerName = this.containerName(options.name)
     await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, {
-      name,
+      name: containerName,
       networks: [this.networkName()],
+      hostname: options.name,
     })
-    return new Node(this, name)
+    return new Node(this, containerName)
   }
 
   async teardown(): Promise<void> {

@@ -68,6 +68,29 @@ describe('Docker Backend', () => {
         {},
       )
     })
+
+    it('gives the container the requested hostname', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.runDetached('hello-world:latest', {
+        name: 'some-name',
+        hostname: 'some-hostname',
+      })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        [
+          'run',
+          '--quiet',
+          '--detach',
+          '--name',
+          'some-name',
+          '--hostname',
+          'some-hostname',
+          'hello-world:latest',
+        ],
+        {},
+      )
+    })
   })
 
   describe('list', () => {
