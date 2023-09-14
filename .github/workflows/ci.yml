@@ -62,4 +62,4 @@ jobs:
         run: yarn --non-interactive --frozen-lockfile
 
       - name: Run tests
-        run: yarn test --maxWorkers=2 --workerIdleMemoryLimit=2000MB
+        run: yarn test
