@@ -98,6 +98,37 @@ describe('Docker Backend', () => {
         {},
       )
     })
+
+    it('gives the container the requested labels', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.runDetached('hello-world:latest', {
+        name: 'some-name',
+        labels: {
+          'key-1': 'value-1',
+          'key-2': 'value-2',
+          'key-3': 'value-3',
+        },
+      })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        [
+          'run',
+          '--quiet',
+          '--detach',
+          '--name',
+          'some-name',
+          '--label',
+          'key-1=value-1',
+          '--label',
+          'key-2=value-2',
+          '--label',
+          'key-3=value-3',
+          'hello-world:latest',
+        ],
+        {},
+      )
+    })
   })
 
   describe('list', () => {
@@ -124,6 +155,50 @@ describe('Docker Backend', () => {
           id: '02dbd848851d3e276980a5a014f5371b0e32b46e4b3a09c5b3219daccb5dd552',
           name: 'test-cluster_bootstrap-node',
           image: 'ironfish:1.3.2',
+        },
+      ])
+    })
+
+    it('filters containers by label', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn().mockReturnValue({
+        stdout:
+          '{"ID":"aaaa","Image":"image-1","Names":"name-1"}\n' +
+          '{"ID":"bbbb","Image":"image-2","Names":"name-2"}\n',
+      })
+
+      const containers = await docker.list({
+        labels: {
+          'key-1': 'value-1',
+          'key-2': 'value-2',
+          'key-3': 'value-3',
+        },
+      })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        [
+          'ps',
+          '--no-trunc',
+          '--all',
+          '--format=json',
+          '--filter',
+          'label=key-1=value-1',
+          '--filter',
+          'label=key-2=value-2',
+          '--filter',
+          'label=key-3=value-3',
+        ],
+        {},
+      )
+      expect(containers).toEqual([
+        {
+          id: 'aaaa',
+          name: 'name-1',
+          image: 'image-1',
+        },
+        {
+          id: 'bbbb',
+          name: 'name-2',
+          image: 'image-2',
         },
       ])
     })
@@ -213,6 +288,35 @@ describe('Docker Backend', () => {
       await docker.createNetwork('a-test-network', { internal: true })
       expect(docker['cmd']).toHaveBeenCalledWith(
         ['network', 'create', '--driver', 'bridge', '--internal', 'a-test-network'],
+        {},
+      )
+    })
+
+    it('creates a network with the specified labels', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.createNetwork('a-test-network', {
+        labels: {
+          'key-1': 'value-1',
+          'key-2': 'value-2',
+          'key-3': 'value-3',
+        },
+      })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        [
+          'network',
+          'create',
+          '--driver',
+          'bridge',
+          '--label',
+          'key-1=value-1',
+          '--label',
+          'key-2=value-2',
+          '--label',
+          'key-3=value-3',
+          'a-test-network',
+        ],
         {},
       )
     })

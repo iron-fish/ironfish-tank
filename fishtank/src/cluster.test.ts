@@ -18,6 +18,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
       })
     })
   })
@@ -32,8 +33,6 @@ describe('Cluster', () => {
           { id: 'aaaa', name: 'my-test-cluster_node-1', image: 'img' },
           { id: 'bbbb', name: 'my-test-cluster_node-2', image: 'img' },
           { id: 'cccc', name: 'my-test-cluster_node-3', image: 'img' },
-          { id: 'dddd', name: 'another-container', image: 'img' },
-          { id: 'eeee', name: 'yet-another-container', image: 'img' },
         ]),
       )
 
@@ -41,7 +40,9 @@ describe('Cluster', () => {
 
       await cluster.teardown()
 
-      expect(list).toHaveBeenCalled()
+      expect(list).toHaveBeenCalledWith({
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+      })
       expect(remove).toHaveBeenCalledWith(
         ['my-test-cluster_node-1', 'my-test-cluster_node-2', 'my-test-cluster_node-3'],
         { force: true, volumes: true },

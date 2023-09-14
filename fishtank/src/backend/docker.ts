@@ -43,7 +43,18 @@ export class DockerError extends Error {
   }
 }
 
+export type Labels = { [key: string]: string }
+
 export type ContainerDetails = { id: string; name: string; image: string }
+
+const labelsToArgs = (labels: Labels): string[] => {
+  const args = []
+  for (const key in labels) {
+    const value = labels[key]
+    args.push('--label', `${key}=${value}`)
+  }
+  return args
+}
 
 export class Docker {
   private readonly executable: string
@@ -73,6 +84,7 @@ export class Docker {
       name?: string
       networks?: readonly string[]
       hostname?: string
+      labels?: Labels
     },
   ): Promise<void> {
     const runArgs = ['run', '--quiet', '--detach']
@@ -87,6 +99,9 @@ export class Docker {
     if (options?.hostname) {
       runArgs.push('--hostname', options.hostname)
     }
+    if (options?.labels) {
+      runArgs.push(...labelsToArgs(options.labels))
+    }
     runArgs.push(image)
     if (options?.args) {
       runArgs.push(...options.args)
@@ -94,9 +109,17 @@ export class Docker {
     await this.cmd(runArgs, {})
   }
 
-  async list(): Promise<ContainerDetails[]> {
+  async list(filter?: { labels?: Labels }): Promise<ContainerDetails[]> {
+    const filterArgs = ['ps', '--no-trunc', '--all', '--format=json']
+    if (filter?.labels) {
+      for (const key in filter.labels) {
+        const value = filter.labels[key]
+        filterArgs.push('--filter', `label=${key}=${value}`)
+      }
+    }
+
     const containers = []
-    const { stdout } = await this.cmd(['ps', '--no-trunc', '--all', '--format=json'], {})
+    const { stdout } = await this.cmd(filterArgs, {})
     for (const line of stdout.split(/\r?\n/)) {
       if (!line) {
         continue
@@ -131,7 +154,7 @@ export class Docker {
 
   async createNetwork(
     name: string,
-    options?: { driver?: string; attachable?: boolean; internal?: boolean },
+    options?: { driver?: string; attachable?: boolean; internal?: boolean; labels?: Labels },
   ): Promise<void> {
     const createArgs = ['network', 'create']
     createArgs.push('--driver', options?.driver ?? 'bridge')
@@ -140,6 +163,9 @@ export class Docker {
     }
     if (options?.internal) {
       createArgs.push('--internal')
+    }
+    if (options?.labels) {
+      createArgs.push(...labelsToArgs(options.labels))
     }
     createArgs.push(name)
     await this.cmd(createArgs, {})

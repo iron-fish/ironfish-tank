@@ -5,6 +5,7 @@ import { Docker } from './backend'
 import { Node } from './node'
 
 export const DEFAULT_IMAGE = 'ironfish:latest'
+export const CLUSTER_LABEL = 'fishtank.cluster'
 
 export class Cluster {
   public readonly name: string
@@ -25,7 +26,11 @@ export class Cluster {
   }
 
   async init(): Promise<void> {
-    return this.backend.createNetwork(this.networkName(), { attachable: true, internal: true })
+    return this.backend.createNetwork(this.networkName(), {
+      attachable: true,
+      internal: true,
+      labels: { [CLUSTER_LABEL]: this.name },
+    })
   }
 
   async spawn(options: { name: string; image?: string }): Promise<Node> {
@@ -34,20 +39,17 @@ export class Cluster {
       name: containerName,
       networks: [this.networkName()],
       hostname: options.name,
+      labels: { [CLUSTER_LABEL]: this.name },
     })
     return new Node(this, containerName)
   }
 
   async teardown(): Promise<void> {
     // Remove containers
-    const removeContainers = []
-    const namePrefix = this.containerName('')
-    for (const container of await this.backend.list()) {
-      if (container.name.startsWith(namePrefix)) {
-        removeContainers.push(container.name)
-      }
-    }
-    await this.backend.remove(removeContainers, { force: true, volumes: true })
+    const containers = (
+      await this.backend.list({ labels: { [CLUSTER_LABEL]: this.name } })
+    ).map((container) => container.name)
+    await this.backend.remove(containers, { force: true, volumes: true })
 
     // Remove networks
     await this.backend.removeNetworks([this.networkName()], { force: true })
