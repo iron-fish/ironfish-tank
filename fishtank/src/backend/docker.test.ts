@@ -4,10 +4,17 @@
 import { Docker } from './docker'
 
 describe('Docker Backend', () => {
-  it('throws an error if Docker fails', async () => {
+  it('throws an error if Docker cannot be found', async () => {
     const docker = new Docker({ executable: '/this/path/does/not/exist' })
     await expect(docker.runDetached('hello-world')).rejects.toThrow(
       "Command '/this/path/does/not/exist run --quiet --detach hello-world' exited with status ENOENT",
+    )
+  })
+
+  it('throws an error if Docker fails', async () => {
+    const docker = new Docker({ executable: '/bin/false' })
+    await expect(docker.runDetached('hello-world')).rejects.toThrow(
+      "Command '/bin/false run --quiet --detach hello-world' exited with status 1",
     )
   })
 
