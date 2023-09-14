@@ -20,7 +20,7 @@ export type RunOptions = {
   args?: readonly string[]
   name?: string
   networks?: readonly string[]
-  volumes?: readonly string[]
+  volumes?: Map<string, string>
 }
 
 const execFile = promisify<string, readonly string[], ExecFileOptions, ExecFilePromiseReturn>(
@@ -83,8 +83,8 @@ export class Docker {
     }
 
     if (options?.volumes) {
-      for (const volume of options.volumes) {
-        runArgs.push('--volume', volume)
+      for (const entry of options.volumes.entries()) {
+        runArgs.push('--volume', `${entry[0]}:${entry[1]}`)
       }
     }
 

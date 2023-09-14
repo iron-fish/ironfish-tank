@@ -35,10 +35,11 @@ describe('Cluster', () => {
       }
       await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
 
+      const volumes = new Map<string, string>([['~/.test_ironfish', '~/.test_ironfish']])
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
-        volumes: ['~/.test_ironfish'],
+        volumes: volumes,
         args: [
           'start',
           '--networkId=0',

@@ -74,7 +74,9 @@ export class Cluster {
 
         if (config.cliconfig.dataDir) {
           args.push(`--datadir=${config.cliconfig.dataDir}`)
-          runOptions.volumes = [config.cliconfig.dataDir]
+          runOptions.volumes = new Map<string, string>([
+            [config.cliconfig.dataDir, config.cliconfig.dataDir],
+          ])
         }
       }
     }

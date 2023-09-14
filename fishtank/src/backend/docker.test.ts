@@ -75,7 +75,10 @@ describe('Docker Backend', () => {
 
       await docker.runDetached('hello-world:latest', {
         name: 'some-name',
-        volumes: ['file_path_1', 'file_path_2'],
+        volumes: new Map<string, string>([
+          ['file_path_1', 'file_path_2'],
+          ['file_path_3', 'file_path_4'],
+        ]),
       })
       expect(docker['cmd']).toHaveBeenCalledWith(
         [
@@ -85,9 +88,9 @@ describe('Docker Backend', () => {
           '--name',
           'some-name',
           '--volume',
-          'file_path_1',
+          'file_path_1:file_path_2',
           '--volume',
-          'file_path_2',
+          'file_path_3:file_path_4',
           'hello-world:latest',
         ],
         {},
