@@ -69,7 +69,11 @@ export class Cluster {
 
       if (config.cliconfig) {
         if (config.cliconfig.configName) {
-          args.push(`--config=${config.cliconfig.configName}`)
+          if (config.cliconfig.dataDir) {
+            args.push(`--config=${config.cliconfig.configName}`)
+          } else {
+            throw new Error('Need to set datadir when config name file is provided.')
+          }
         }
 
         if (config.cliconfig.dataDir) {
