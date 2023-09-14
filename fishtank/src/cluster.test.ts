@@ -17,7 +17,6 @@ describe('Cluster', () => {
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
-        volume: undefined,
       })
     })
 
@@ -28,7 +27,6 @@ describe('Cluster', () => {
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const nodeConfig: NodeConfig = {
-        customNetwork: './test_network.json',
         networkId: '0',
         cliconfig: {
           dataDir: '~/.test_ironfish',
@@ -40,9 +38,9 @@ describe('Cluster', () => {
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
-        volume: '~/.test_ironfish',
+        volumes: ['~/.test_ironfish'],
         args: [
-          '--customNetwork=./test_network.json',
+          'start',
           '--networkId=0',
           '--config=./config.json',
           '--datadir=~/.test_ironfish',
@@ -57,7 +55,6 @@ describe('Cluster', () => {
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const nodeConfig: NodeConfig = {
-        customNetwork: './test_network.json',
         networkId: '0',
         cliconfig: {
           configName: './config.json',
@@ -68,11 +65,7 @@ describe('Cluster', () => {
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
-        args: [
-          '--customNetwork=./test_network.json',
-          '--networkId=0',
-          '--config=./config.json',
-        ],
+        args: ['start', '--networkId=0', '--config=./config.json'],
       })
     })
   })

@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { Docker, runOption } from './backend'
+import { Docker, RunOptions } from './backend'
 
 export const DEFAULT_IMAGE = 'ironfish:latest'
 
@@ -22,12 +22,6 @@ export type NodeConfig = {
   The basic shared config for any IronFish command
   */
   cliconfig?: IronFishCliConfig
-
-  /**
-   * Path to a JSON file containing the network definition of a
-   * custom network to connect to
-   */
-  customNetwork?: string
 
   /**
    * Network ID of an official Iron Fish network to connect to
@@ -61,17 +55,13 @@ export class Cluster {
     const name = this.containerName(options.name)
 
     const args: string[] = []
-    const runOptions: runOption = {
+    const runOptions: RunOptions = {
       name,
       networks: [this.networkName()],
     }
 
     if (options?.config) {
       const config = options.config
-
-      if (config.customNetwork) {
-        args.push(`--customNetwork=${config.customNetwork}`)
-      }
 
       if (config.networkId) {
         args.push(`--networkId=${config.networkId}`)
@@ -84,13 +74,13 @@ export class Cluster {
 
         if (config.cliconfig.dataDir) {
           args.push(`--datadir=${config.cliconfig.dataDir}`)
-          runOptions.volume = config.cliconfig.dataDir
+          runOptions.volumes = [config.cliconfig.dataDir]
         }
       }
     }
 
     if (args.length > 0) {
-      runOptions.args = args
+      runOptions.args = ['start'].concat(args)
     }
 
     return this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)

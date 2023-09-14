@@ -69,11 +69,14 @@ describe('Docker Backend', () => {
       )
     })
 
-    it('mounts the volume', async () => {
+    it('mounts the volumes', async () => {
       const docker = new Docker()
       docker['cmd'] = jest.fn()
 
-      await docker.runDetached('hello-world:latest', { name: 'some-name', volume: 'file_path' })
+      await docker.runDetached('hello-world:latest', {
+        name: 'some-name',
+        volumes: ['file_path_1', 'file_path_2'],
+      })
       expect(docker['cmd']).toHaveBeenCalledWith(
         [
           'run',
@@ -82,7 +85,9 @@ describe('Docker Backend', () => {
           '--name',
           'some-name',
           '--volume',
-          'file_path',
+          'file_path_1',
+          '--volume',
+          'file_path_2',
           'hello-world:latest',
         ],
         {},
