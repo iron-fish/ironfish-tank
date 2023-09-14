@@ -16,6 +16,13 @@ type ExecFilePromiseError = {
   stderr: string
 }
 
+export type runOption = {
+  args?: readonly string[]
+  name?: string
+  networks?: readonly string[]
+  volume?: string
+}
+
 const execFile = promisify<string, readonly string[], ExecFileOptions, ExecFilePromiseReturn>(
   child_process.execFile,
 )
@@ -64,10 +71,7 @@ export class Docker {
     }
   }
 
-  async runDetached(
-    image: string,
-    options?: { args?: readonly string[]; name?: string; networks?: readonly string[] },
-  ): Promise<void> {
+  async runDetached(image: string, options?: runOption): Promise<void> {
     const runArgs = ['run', '--quiet', '--detach']
     if (options?.name) {
       runArgs.push('--name', options.name)
@@ -77,6 +81,11 @@ export class Docker {
         runArgs.push('--network', network)
       }
     }
+
+    if (options?.volume) {
+      runArgs.push('--volume', options.volume)
+    }
+
     runArgs.push(image)
     if (options?.args) {
       runArgs.push(...options.args)

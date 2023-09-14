@@ -68,6 +68,26 @@ describe('Docker Backend', () => {
         {},
       )
     })
+
+    it('mounts the volume', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.runDetached('hello-world:latest', { name: 'some-name', volume: 'file_path' })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        [
+          'run',
+          '--quiet',
+          '--detach',
+          '--name',
+          'some-name',
+          '--volume',
+          'file_path',
+          'hello-world:latest',
+        ],
+        {},
+      )
+    })
   })
 
   describe('createNetwork', () => {
