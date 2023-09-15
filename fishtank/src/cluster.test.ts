@@ -1,11 +1,24 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+import { existsSync, mkdirSync } from 'fs'
+import { tmpdir } from 'os'
+import { join, parse } from 'path'
 import { Docker } from './backend'
 import { Cluster, NodeConfig } from './cluster'
 
 describe('Cluster', () => {
   describe('spawn', () => {
+    const datadir = `${__dirname}/.ironfish`
+
+    beforeAll(() => {
+      if (!existsSync(datadir)) {
+        mkdirSync(datadir, {
+          recursive: true,
+        })
+      }
+    })
+
     it('launches a detached container with the default image', async () => {
       const backend = new Docker()
       const cluster = new Cluster({ name: 'my-test-cluster', backend })
@@ -29,13 +42,19 @@ describe('Cluster', () => {
       const nodeConfig: NodeConfig = {
         networkId: '0',
         cliconfig: {
-          dataDir: '~/.test_ironfish',
+          dataDir: datadir,
           configName: './config.json',
         },
       }
       await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
 
-      const volumes = new Map<string, string>([['~/.test_ironfish', '~/.test_ironfish']])
+      const parsedPath = parse(datadir)
+      const containerDatadir = join(
+        tmpdir(),
+        'my-test-cluster_my-test-container',
+        parsedPath.name,
+      )
+      const volumes = new Map<string, string>([[containerDatadir, containerDatadir]])
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
@@ -44,7 +63,7 @@ describe('Cluster', () => {
           'start',
           '--networkId=0',
           '--config=./config.json',
-          '--datadir=~/.test_ironfish',
+          `--datadir=${containerDatadir}`,
         ],
       })
     })
@@ -76,17 +95,23 @@ describe('Cluster', () => {
       const nodeConfig: NodeConfig = {
         networkId: '0',
         cliconfig: {
-          dataDir: '~/.test_ironfish',
+          dataDir: datadir,
         },
       }
       await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
 
-      const volumes = new Map<string, string>([['~/.test_ironfish', '~/.test_ironfish']])
+      const parsedPath = parse(datadir)
+      const containerDatadir = join(
+        tmpdir(),
+        'my-test-cluster_my-test-container',
+        parsedPath.name,
+      )
+      const volumes = new Map<string, string>([[containerDatadir, containerDatadir]])
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         volumes: volumes,
-        args: ['start', '--networkId=0', '--datadir=~/.test_ironfish'],
+        args: ['start', '--networkId=0', `--datadir=${containerDatadir}`],
       })
     })
 
