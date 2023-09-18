@@ -1,6 +1,9 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+import { ConfigOptions } from '@ironfish/sdk'
+import { tmpdir } from 'os'
+import { join } from 'path'
 import { Docker } from './backend'
 import { Cluster } from './cluster'
 
@@ -19,6 +22,34 @@ describe('Cluster', () => {
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
         labels: { 'fishtank.cluster': 'my-test-cluster' },
+      })
+    })
+
+    it('launches a detached container with node config', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
+      const nodeConfig: Partial<ConfigOptions> = {
+        networkId: 0,
+      }
+      await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
+
+      const containerDatadir = join(
+        tmpdir(),
+        'fishtank',
+        'my-test-cluster_my-test-container',
+        '.ironfish',
+      )
+      const volumes = new Map<string, string>([[containerDatadir, '/fishtank/.ironfish']])
+      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        name: 'my-test-cluster_my-test-container',
+        networks: ['my-test-cluster'],
+        hostname: 'my-test-container',
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+        volumes: volumes,
+        args: ['start', '--datadir=/fishtank/.ironfish'],
       })
     })
   })
