@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { cpSync, existsSync, mkdirSync } from 'fs'
+import { cpSync, promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, parse } from 'path'
 import { Docker, RunOptions } from './backend'
@@ -82,12 +82,10 @@ export class Cluster {
         if (config.cliconfig.dataDir) {
           const parsedPath = parse(config.cliconfig.dataDir)
 
-          const dest = join(tmpdir(), name, parsedPath.name)
-          if (!existsSync(dest)) {
-            mkdirSync(dest, {
-              recursive: true,
-            })
-          }
+          const dest = join(tmpdir(), 'fishtank', name, parsedPath.name)
+          await promises.mkdir(dest, {
+            recursive: true,
+          })
 
           cpSync(config.cliconfig.dataDir, dest, {
             recursive: true,

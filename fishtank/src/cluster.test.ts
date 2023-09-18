@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { existsSync, mkdirSync } from 'fs'
+import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, parse } from 'path'
 import { Docker } from './backend'
@@ -11,12 +11,10 @@ describe('Cluster', () => {
   describe('spawn', () => {
     const datadir = `${__dirname}/.ironfish`
 
-    beforeAll(() => {
-      if (!existsSync(datadir)) {
-        mkdirSync(datadir, {
-          recursive: true,
-        })
-      }
+    beforeAll(async () => {
+      await promises.mkdir(datadir, {
+        recursive: true,
+      })
     })
 
     it('launches a detached container with the default image', async () => {
@@ -51,6 +49,7 @@ describe('Cluster', () => {
       const parsedPath = parse(datadir)
       const containerDatadir = join(
         tmpdir(),
+        'fishtank',
         'my-test-cluster_my-test-container',
         parsedPath.name,
       )
@@ -103,6 +102,7 @@ describe('Cluster', () => {
       const parsedPath = parse(datadir)
       const containerDatadir = join(
         tmpdir(),
+        'fishtank',
         'my-test-cluster_my-test-container',
         parsedPath.name,
       )
