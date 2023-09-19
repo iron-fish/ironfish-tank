@@ -52,8 +52,6 @@ export class Cluster {
     }
 
     if (options.config) {
-      const args: string[] = []
-
       const configString = JSON.stringify(options.config)
 
       const dest = join(tmpdir(), 'fishtank', containerName, '.ironfish')
@@ -63,9 +61,7 @@ export class Cluster {
 
       await promises.writeFile(resolve(dest, 'config.json'), configString)
 
-      args.push('--datadir=/fishtank/.ironfish')
-      runOptions.volumes = new Map<string, string>([[dest, '/fishtank/.ironfish']])
-      runOptions.args = ['start'].concat(args)
+      runOptions.volumes = new Map<string, string>([[dest, '/root/.ironfish']])
     }
 
     await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)

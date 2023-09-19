@@ -43,7 +43,7 @@ describe('Cluster', () => {
         'my-test-cluster_my-test-container',
         '.ironfish',
       )
-      const volumes = new Map<string, string>([[containerDatadir, '/fishtank/.ironfish']])
+      const volumes = new Map<string, string>([[containerDatadir, '/root/.ironfish']])
       expect(
         await promises.readFile(resolve(containerDatadir, 'config.json'), { encoding: 'utf8' }),
       ).toEqual('{"networkId":0}')
@@ -53,7 +53,6 @@ describe('Cluster', () => {
         hostname: 'my-test-container',
         labels: { 'fishtank.cluster': 'my-test-cluster' },
         volumes: volumes,
-        args: ['start', '--datadir=/fishtank/.ironfish'],
       })
     })
   })
