@@ -129,6 +129,34 @@ describe('Docker Backend', () => {
         {},
       )
     })
+
+    it('mounts the volumes', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.runDetached('hello-world:latest', {
+        name: 'some-name',
+        volumes: new Map<string, string>([
+          ['file_path_1', 'file_path_2'],
+          ['file_path_3', 'file_path_4'],
+        ]),
+      })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        [
+          'run',
+          '--quiet',
+          '--detach',
+          '--name',
+          'some-name',
+          '--volume',
+          'file_path_1:file_path_2',
+          '--volume',
+          'file_path_3:file_path_4',
+          'hello-world:latest',
+        ],
+        {},
+      )
+    })
   })
 
   describe('list', () => {

@@ -1,7 +1,11 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { Docker } from './backend'
+import { ConfigOptions } from '@ironfish/sdk'
+import { promises } from 'fs'
+import { tmpdir } from 'os'
+import { join, resolve } from 'path'
+import { Docker, RunOptions } from './backend'
 import { Node } from './node'
 
 export const DEFAULT_IMAGE = 'ironfish:latest'
@@ -33,14 +37,34 @@ export class Cluster {
     })
   }
 
-  async spawn(options: { name: string; image?: string }): Promise<Node> {
+  async spawn(options: {
+    name: string
+    image?: string
+    config?: Partial<ConfigOptions>
+  }): Promise<Node> {
     const containerName = this.containerName(options.name)
-    await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, {
+
+    const runOptions: RunOptions = {
       name: containerName,
       networks: [this.networkName()],
       hostname: options.name,
       labels: { [CLUSTER_LABEL]: this.name },
-    })
+    }
+
+    if (options.config) {
+      const configString = JSON.stringify(options.config)
+
+      const dest = join(tmpdir(), 'fishtank', containerName, '.ironfish')
+      await promises.mkdir(dest, {
+        recursive: true,
+      })
+
+      await promises.writeFile(resolve(dest, 'config.json'), configString)
+
+      runOptions.volumes = new Map<string, string>([[dest, '/root/.ironfish']])
+    }
+
+    await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)
     return new Node(this, containerName)
   }
 
