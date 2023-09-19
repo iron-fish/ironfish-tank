@@ -69,6 +69,7 @@ export class Cluster {
     name: string
     image?: string
     config?: Partial<ConfigOptions>
+    networkDefinition?: Partial<NetworkDefinition>
   }): Promise<Node> {
     const extraArgs = []
     for (const bootstrapNode of await this.getBootstrapNodes()) {
@@ -94,6 +95,37 @@ export class Cluster {
       networks: [naming.networkName(this)],
       hostname: options.name,
       labels: { [CLUSTER_LABEL]: this.name, ...options.extraLabels },
+    }
+
+    const args: string[] = []
+
+    if (options.networkDefinition) {
+      const networkDefinitionString = JSON.stringify(options.networkDefinition)
+
+      const dest = join(tmpdir(), 'fishtank', containerName, '.ironfish')
+      await promises.mkdir(dest, {
+        recursive: true,
+      })
+
+      await promises.writeFile(resolve(dest, 'customNetwork.json'), networkDefinitionString)
+
+      if (runOptions.volumes === undefined) {
+        runOptions.volumes = new Map<string, string>([[dest, '/root/.ironfish']])
+      } else if (!runOptions.volumes.has(dest)) {
+        runOptions.volumes.put(dest, '/root/.ironfish')
+      }
+      args.push('-c=/root/.ironfish/customNetwork.json')
+    }
+
+    if (args.length > 0) {
+      runOptions.args = ['start'].concat(args)
+    }
+
+    await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, {
+      name: containerName,
+      networks: [this.networkName()],
+      hostname: options.name,
+      labels: { [CLUSTER_LABEL]: this.name },
     }
 
     if (options.config) {
