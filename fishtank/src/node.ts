@@ -3,6 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { Docker } from './backend'
 import { Cluster } from './cluster'
+import * as naming from './naming'
 
 export class Node {
   public readonly cluster: Cluster
@@ -17,7 +18,7 @@ export class Node {
   }
 
   private get containerName(): string {
-    return this.cluster['containerName'](this.name)
+    return naming.containerName(this.cluster, this.name)
   }
 
   remove(): Promise<void> {

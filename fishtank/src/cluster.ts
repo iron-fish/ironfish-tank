@@ -6,6 +6,7 @@ import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { Docker, Labels, RunOptions } from './backend'
+import * as naming from './naming'
 import { Node } from './node'
 
 export const DEFAULT_IMAGE = 'ironfish:latest'
@@ -25,20 +26,13 @@ export class Cluster {
   private readonly backend: Docker
 
   constructor(options: { name: string; backend?: Docker }) {
+    naming.assertValidName(options.name)
     this.name = options.name
     this.backend = options.backend ?? new Docker()
   }
 
-  private networkName(): string {
-    return this.name
-  }
-
-  private containerName(name: string): string {
-    return `${this.name}_${name}`
-  }
-
   async init(options?: { bootstrap?: boolean | BootstrapOptions }): Promise<void> {
-    await this.backend.createNetwork(this.networkName(), {
+    await this.backend.createNetwork(naming.networkName(this), {
       attachable: true,
       internal: true,
       labels: { [CLUSTER_LABEL]: this.name },
@@ -91,12 +85,13 @@ export class Cluster {
     extraArgs?: string[]
     extraLabels?: Labels
   }): Promise<Node> {
-    const containerName = this.containerName(options.name)
+    naming.assertValidName(options.name)
+    const containerName = naming.containerName(this, options.name)
 
     const runOptions: RunOptions = {
       args: ['start', ...(options.extraArgs ?? [])],
       name: containerName,
-      networks: [this.networkName()],
+      networks: [naming.networkName(this)],
       hostname: options.name,
       labels: { [CLUSTER_LABEL]: this.name, ...options.extraLabels },
     }
@@ -126,6 +121,6 @@ export class Cluster {
     await this.backend.remove(containers, { force: true, volumes: true })
 
     // Remove networks
-    await this.backend.removeNetworks([this.networkName()], { force: true })
+    await this.backend.removeNetworks([naming.networkName(this)], { force: true })
   }
 }

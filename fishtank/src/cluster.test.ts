@@ -9,6 +9,16 @@ import { Docker } from './backend'
 import { Cluster } from './cluster'
 
 describe('Cluster', () => {
+  describe('constructor', () => {
+    it('refuses to create a cluster with an invalid name', () => {
+      expect(() => new Cluster({ name: '' })).toThrow('Invalid name')
+      expect(() => new Cluster({ name: 'abc def' })).toThrow('Invalid name')
+      expect(() => new Cluster({ name: 'abc:def' })).toThrow('Invalid name')
+      expect(() => new Cluster({ name: 'abc/def' })).toThrow('Invalid name')
+      expect(() => new Cluster({ name: 'abc.def' })).toThrow('Invalid name')
+    })
+  })
+
   describe('init', () => {
     it('creates the network and launches a bootstrap node', async () => {
       const backend = new Docker()
