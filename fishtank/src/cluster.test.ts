@@ -2,8 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConfigOptions } from '@ironfish/sdk'
+import { promises } from 'fs'
 import { tmpdir } from 'os'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { Docker } from './backend'
 import { Cluster } from './cluster'
 
@@ -43,6 +44,9 @@ describe('Cluster', () => {
         '.ironfish',
       )
       const volumes = new Map<string, string>([[containerDatadir, '/fishtank/.ironfish']])
+      expect(
+        await promises.readFile(resolve(containerDatadir, 'config.json'), { encoding: 'utf8' }),
+      ).toEqual('{"networkId":0}')
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
