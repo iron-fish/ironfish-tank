@@ -16,7 +16,11 @@ export class Node {
     this.backend = cluster['backend']
   }
 
+  private get containerName(): string {
+    return this.cluster['containerName'](this.name)
+  }
+
   remove(): Promise<void> {
-    return this.backend.remove([this.name], { force: true, volumes: true })
+    return this.backend.remove([this.containerName], { force: true, volumes: true })
   }
 }

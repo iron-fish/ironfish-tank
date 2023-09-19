@@ -9,16 +9,127 @@ import { Docker } from './backend'
 import { Cluster } from './cluster'
 
 describe('Cluster', () => {
-  describe('spawn', () => {
-    it('launches a detached container with the default image', async () => {
+  describe('init', () => {
+    it('creates the network and launches a bootstrap node', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const createNetwork = jest
+        .spyOn(backend, 'createNetwork')
+        .mockReturnValue(Promise.resolve())
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
+      await cluster.init()
+
+      expect(createNetwork).toHaveBeenCalledWith('my-test-cluster', {
+        attachable: true,
+        internal: true,
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+      })
+      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
+        name: 'my-test-cluster_bootstrap',
+        networks: ['my-test-cluster'],
+        hostname: 'bootstrap',
+        labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+      })
+    })
+
+    it('only creates the network if bootstrap was not requested', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const createNetwork = jest
+        .spyOn(backend, 'createNetwork')
+        .mockReturnValue(Promise.resolve())
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
+      await cluster.init({ bootstrap: false })
+
+      expect(createNetwork).toHaveBeenCalledWith('my-test-cluster', {
+        attachable: true,
+        internal: true,
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+      })
+      expect(runDetached).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('bootstrap', () => {
+    it('launches a bootstrap node', async () => {
       const backend = new Docker()
       const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
-      await cluster.spawn({ name: 'my-test-container' })
+      await cluster.bootstrap()
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
+        name: 'my-test-cluster_bootstrap',
+        networks: ['my-test-cluster'],
+        hostname: 'bootstrap',
+        labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+      })
+    })
+
+    it('launches a bootstrap node with the given name', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
+      await cluster.bootstrap({ nodeName: 'my-bootstrap-node' })
+
+      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
+        name: 'my-test-cluster_my-bootstrap-node',
+        networks: ['my-test-cluster'],
+        hostname: 'my-bootstrap-node',
+        labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+      })
+    })
+
+    it('launches a bootstrap node with the given image', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
+      await cluster.bootstrap({ nodeImage: 'some-image' })
+
+      expect(runDetached).toHaveBeenCalledWith('some-image', {
+        args: ['start'],
+        name: 'my-test-cluster_bootstrap',
+        networks: ['my-test-cluster'],
+        hostname: 'bootstrap',
+        labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+      })
+    })
+  })
+
+  describe('spawn', () => {
+    it('launches a detached container with the default image', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const list = jest
+        .spyOn(backend, 'list')
+        .mockReturnValue(
+          Promise.resolve([
+            { id: 'aaaa', name: 'my-test-cluster_my-bootstrap-node', image: 'img' },
+          ]),
+        )
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
+      const node = await cluster.spawn({ name: 'my-test-container' })
+
+      expect(node.name).toEqual('my-test-container')
+      expect(list).toHaveBeenCalledWith({
+        labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+      })
+      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start', '--bootstrap', 'my-bootstrap-node'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
@@ -26,7 +137,7 @@ describe('Cluster', () => {
       })
     })
 
-    it('launches a detached container with node config', async () => {
+    it('launches a detached container with the provided configuration', async () => {
       const backend = new Docker()
       const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
@@ -48,6 +159,7 @@ describe('Cluster', () => {
         await promises.readFile(resolve(containerDatadir, 'config.json'), { encoding: 'utf8' }),
       ).toEqual('{"networkId":0}')
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
