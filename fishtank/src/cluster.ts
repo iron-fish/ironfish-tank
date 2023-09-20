@@ -3,7 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConfigOptions } from '@ironfish/sdk'
 import { promises } from 'fs'
-import { resolve } from 'path'
+import { resolve, join } from 'path'
 import { Docker, Labels, RunOptions } from './backend'
 import * as naming from './naming'
 import { Node } from './node'
@@ -17,6 +17,11 @@ export const BOOTSTRAP_NODE_ROLE = 'bootstrap'
 export type BootstrapOptions = {
   nodeName?: string
   nodeImage?: string
+}
+export const DEFAULT_CONTAINER_DATADIR = '/root/.ironfish'
+
+export type NetworkDefinition = {
+  id: number
 }
 
 export class Cluster {
@@ -82,6 +87,7 @@ export class Cluster {
     name: string
     image?: string
     config?: Partial<ConfigOptions>
+    networkDefinition?: Partial<NetworkDefinition>
     extraArgs?: string[]
     extraLabels?: Labels
   }): Promise<Node> {
@@ -99,49 +105,52 @@ export class Cluster {
 
     const args: string[] = []
 
+    if (options.config) {
+      const configString = JSON.stringify(options.config)
+
+      const dest = join(tmpdir(), 'fishtank', this.name, options.name, '.ironfish')
+      await promises.mkdir(dest, {
+        recursive: true,
+      })
+
+      await promises.writeFile(resolve(node.dataDir, 'config.json'), configString)
+
+      if (runOptions.volumes === undefined) {
+        runOptions.volumes = new Map<string, string>([[dest, DEFAULT_CONTAINER_DATADIR]])
+      } else {
+        runOptions.volumes.set(dest, DEFAULT_CONTAINER_DATADIR)
+      }
+    }
+
     if (options.networkDefinition) {
       const networkDefinitionString = JSON.stringify(options.networkDefinition)
 
-      const dest = join(tmpdir(), 'fishtank', containerName, '.ironfish')
+      const dest = join(tmpdir(), 'fishtank', this.name, options.name, '.ironfish')
       await promises.mkdir(dest, {
         recursive: true,
       })
 
       await promises.writeFile(resolve(dest, 'customNetwork.json'), networkDefinitionString)
 
+      let containerPath = DEFAULT_CONTAINER_DATADIR
       if (runOptions.volumes === undefined) {
-        runOptions.volumes = new Map<string, string>([[dest, '/root/.ironfish']])
-      } else if (!runOptions.volumes.has(dest)) {
-        runOptions.volumes.put(dest, '/root/.ironfish')
+        runOptions.volumes = new Map<string, string>([[dest, containerPath]])
+      } else if (runOptions.volumes.has(dest)) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        containerPath = runOptions.volumes.get(dest)!
+      } else {
+        runOptions.volumes.set(dest, containerPath)
       }
-      args.push('-c=/root/.ironfish/customNetwork.json')
+      args.push(`--customNetwork=${resolve(containerPath, 'customNetwork.json')}`)
     }
 
     if (args.length > 0) {
       runOptions.args = ['start'].concat(args)
     }
 
-    await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, {
-      name: containerName,
-      networks: [this.networkName()],
-      hostname: options.name,
-      labels: { [CLUSTER_LABEL]: this.name },
-    }
-
-    if (options.config) {
-      const configString = JSON.stringify(options.config)
-
-      await promises.mkdir(node.dataDir, {
-        recursive: true,
-      })
-
-      await promises.writeFile(resolve(node.dataDir, 'config.json'), configString)
-
-      runOptions.volumes = new Map<string, string>([[node.dataDir, '/root/.ironfish']])
-    }
-
     await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)
-    return node
+
+    return new Node(this, containerName)
   }
 
   async teardown(): Promise<void> {
@@ -153,5 +162,9 @@ export class Cluster {
 
     // Remove networks
     await this.backend.removeNetworks([naming.networkName(this)], { force: true })
+
+    // Remove cluster folder
+    const dest = join(tmpdir(), 'fishtank', this.name)
+    await promises.rm(dest, { recursive: true })
   }
 }
