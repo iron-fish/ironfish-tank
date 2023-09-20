@@ -190,6 +190,46 @@ describe('Cluster', () => {
       const networkDefinition: Partial<NetworkDefinition> = {
         id: 0,
       }
+
+      await cluster.spawn({
+        name: 'my-test-container',
+        networkDefinition: networkDefinition,
+      })
+
+      const containerDatadir = join(
+        tmpdir(),
+        'fishtank',
+        'my-test-cluster',
+        'my-test-container',
+        '.ironfish',
+      )
+      const volumes = new Map<string, string>([[containerDatadir, '/root/.ironfish']])
+
+      expect(
+        await promises.readFile(resolve(containerDatadir, 'customNetwork.json'), {
+          encoding: 'utf8',
+        }),
+      ).toEqual('{"id":0}')
+
+      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        name: 'my-test-cluster_my-test-container',
+        networks: ['my-test-cluster'],
+        hostname: 'my-test-container',
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+        volumes: volumes,
+        args: ['start', '--customNetwork=/root/.ironfish/customNetwork.json'],
+      })
+    })
+
+    it('launches a detached container with custom network definition and node config', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
+      const networkDefinition: Partial<NetworkDefinition> = {
+        id: 0,
+      }
       const nodeConfig: Partial<ConfigOptions> = {
         nodeName: 'test node',
       }
@@ -219,40 +259,6 @@ describe('Cluster', () => {
         await promises.readFile(resolve(containerDatadir, 'config.json'), { encoding: 'utf8' }),
       ).toEqual('{"nodeName":"test node"}')
 
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
-        name: 'my-test-cluster_my-test-container',
-        networks: ['my-test-cluster'],
-        hostname: 'my-test-container',
-        labels: { 'fishtank.cluster': 'my-test-cluster' },
-        volumes: volumes,
-        args: ['start', '--customNetwork=/root/.ironfish/customNetwork.json'],
-      })
-    })
-
-    it('launches a detached container with custom network definition and node config', async () => {
-      const backend = new Docker()
-      const cluster = new Cluster({ name: 'my-test-cluster', backend })
-
-      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
-
-      const networkDefinition: Partial<NetworkDefinition> = {
-        id: 0,
-      }
-      await cluster.spawn({ name: 'my-test-container', networkDefinition: networkDefinition })
-
-      const containerDatadir = join(
-        tmpdir(),
-        'fishtank',
-        'my-test-cluster',
-        'my-test-container',
-        '.ironfish',
-      )
-      const volumes = new Map<string, string>([[containerDatadir, '/root/.ironfish']])
-      expect(
-        await promises.readFile(resolve(containerDatadir, 'customNetwork.json'), {
-          encoding: 'utf8',
-        }),
-      ).toEqual('{"id":0}')
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
