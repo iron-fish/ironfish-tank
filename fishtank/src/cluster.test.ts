@@ -119,9 +119,15 @@ describe('Cluster', () => {
   })
 
   describe('spawn', () => {
+    let cluster: Cluster
+
+    afterEach(async () => {
+      await cluster.teardown()
+    })
+
     it('launches a detached container with the default image', async () => {
       const backend = new Docker()
-      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+      cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       const list = jest
         .spyOn(backend, 'list')
@@ -149,7 +155,7 @@ describe('Cluster', () => {
 
     it('launches a detached container with the provided configuration', async () => {
       const backend = new Docker()
-      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+      cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
@@ -183,12 +189,12 @@ describe('Cluster', () => {
 
     it('launches a detached container with custom network definition', async () => {
       const backend = new Docker()
-      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+      cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const networkDefinition: Partial<NetworkDefinition> = {
-        id: 0,
+        id: 123,
       }
 
       await cluster.spawn({
@@ -209,7 +215,7 @@ describe('Cluster', () => {
         await promises.readFile(resolve(containerDatadir, 'customNetwork.json'), {
           encoding: 'utf8',
         }),
-      ).toEqual('{"id":0}')
+      ).toEqual('{"id":123}')
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         name: 'my-test-cluster_my-test-container',
@@ -223,7 +229,7 @@ describe('Cluster', () => {
 
     it('launches a detached container with custom network definition and node config', async () => {
       const backend = new Docker()
-      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+      cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 

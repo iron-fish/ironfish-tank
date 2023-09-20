@@ -2,8 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConfigOptions } from '@ironfish/sdk'
-import { promises } from 'fs'
-import { resolve, join } from 'path'
+import { existsSync, promises } from 'fs'
+import { tmpdir } from 'os'
+import { join, resolve } from 'path'
 import { Docker, Labels, RunOptions } from './backend'
 import * as naming from './naming'
 import { Node } from './node'
@@ -18,7 +19,7 @@ export type BootstrapOptions = {
   nodeName?: string
   nodeImage?: string
 }
-export const DEFAULT_CONTAINER_DATADIR = '/root/.ironfish'
+export const CONTAINER_DATADIR = '/root/.ironfish'
 
 export type NetworkDefinition = {
   id: number
@@ -96,43 +97,39 @@ export class Cluster {
     const containerName = naming.containerName(this, options.name)
 
     const runOptions: RunOptions = {
-      args: ['start', ...(options.extraArgs ?? [])],
       name: containerName,
       networks: [naming.networkName(this)],
       hostname: options.name,
       labels: { [CLUSTER_LABEL]: this.name, ...options.extraLabels },
     }
 
-    const args: string[] = []
+    const args: string[] = ['start', ...(options.extraArgs ?? [])]
+
+    const dest = node.dataDir
+    if (options.config || options.networkDefinition) {
+      await promises.mkdir(dest, {
+        recursive: true,
+      })
+    }
 
     if (options.config) {
       const configString = JSON.stringify(options.config)
 
-      const dest = join(tmpdir(), 'fishtank', this.name, options.name, '.ironfish')
-      await promises.mkdir(dest, {
-        recursive: true,
-      })
-
-      await promises.writeFile(resolve(node.dataDir, 'config.json'), configString)
+      await promises.writeFile(resolve(dest, 'config.json'), configString)
 
       if (runOptions.volumes === undefined) {
-        runOptions.volumes = new Map<string, string>([[dest, DEFAULT_CONTAINER_DATADIR]])
+        runOptions.volumes = new Map<string, string>([[dest, CONTAINER_DATADIR]])
       } else {
-        runOptions.volumes.set(dest, DEFAULT_CONTAINER_DATADIR)
+        runOptions.volumes.set(dest, CONTAINER_DATADIR)
       }
     }
 
     if (options.networkDefinition) {
       const networkDefinitionString = JSON.stringify(options.networkDefinition)
 
-      const dest = join(tmpdir(), 'fishtank', this.name, options.name, '.ironfish')
-      await promises.mkdir(dest, {
-        recursive: true,
-      })
-
       await promises.writeFile(resolve(dest, 'customNetwork.json'), networkDefinitionString)
 
-      let containerPath = DEFAULT_CONTAINER_DATADIR
+      let containerPath = CONTAINER_DATADIR
       if (runOptions.volumes === undefined) {
         runOptions.volumes = new Map<string, string>([[dest, containerPath]])
       } else if (runOptions.volumes.has(dest)) {
@@ -144,8 +141,8 @@ export class Cluster {
       args.push(`--customNetwork=${resolve(containerPath, 'customNetwork.json')}`)
     }
 
-    if (args.length > 0) {
-      runOptions.args = ['start'].concat(args)
+    if (args.length > 1) {
+      runOptions.args = args
     }
 
     await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)
@@ -165,6 +162,8 @@ export class Cluster {
 
     // Remove cluster folder
     const dest = join(tmpdir(), 'fishtank', this.name)
-    await promises.rm(dest, { recursive: true })
+    if (existsSync(dest)) {
+      await promises.rm(dest, { recursive: true })
+    }
   }
 }
