@@ -28,7 +28,7 @@
     "build": "tsc -b",
     "lint": "tsc -b && eslint --ext .ts,.tsx,.js,.jsx src/",
     "lint:fix": "tsc -b && eslint --ext .ts,.tsx,.js,.jsx src/ --fix",
-    "test": "tsc -b && tsc -b tsconfig.test.json && jest --testTimeout=${JEST_TIMEOUT:-5000}",
+    "test": "tsc -b && tsc -b tsconfig.test.json && jest --testTimeout=${JEST_TIMEOUT:-5000} --forceExit",
     "clean": "rimraf build"
   },
   "bugs": {

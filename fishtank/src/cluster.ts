@@ -3,8 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConfigOptions } from '@ironfish/sdk'
 import { promises } from 'fs'
-import { tmpdir } from 'os'
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 import { Docker, Labels, RunOptions } from './backend'
 import * as naming from './naming'
 import { Node } from './node'
@@ -86,6 +85,7 @@ export class Cluster {
     extraLabels?: Labels
   }): Promise<Node> {
     naming.assertValidName(options.name)
+    const node = new Node(this, options.name)
     const containerName = naming.containerName(this, options.name)
 
     const runOptions: RunOptions = {
@@ -99,18 +99,17 @@ export class Cluster {
     if (options.config) {
       const configString = JSON.stringify(options.config)
 
-      const dest = join(tmpdir(), 'fishtank', containerName, '.ironfish')
-      await promises.mkdir(dest, {
+      await promises.mkdir(node.dataDir, {
         recursive: true,
       })
 
-      await promises.writeFile(resolve(dest, 'config.json'), configString)
+      await promises.writeFile(resolve(node.dataDir, 'config.json'), configString)
 
-      runOptions.volumes = new Map<string, string>([[dest, '/root/.ironfish']])
+      runOptions.volumes = new Map<string, string>([[node.dataDir, '/root/.ironfish']])
     }
 
     await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)
-    return new Node(this, options.name)
+    return node
   }
 
   async teardown(): Promise<void> {
