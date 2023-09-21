@@ -37,7 +37,6 @@ describe('Cluster', () => {
         labels: { 'fishtank.cluster': 'my-test-cluster' },
       })
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
-        args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
@@ -75,7 +74,6 @@ describe('Cluster', () => {
       await cluster.bootstrap()
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
-        args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
@@ -92,7 +90,6 @@ describe('Cluster', () => {
       await cluster.bootstrap({ nodeName: 'my-bootstrap-node' })
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
-        args: ['start'],
         name: 'my-test-cluster_my-bootstrap-node',
         networks: ['my-test-cluster'],
         hostname: 'my-bootstrap-node',
@@ -109,7 +106,6 @@ describe('Cluster', () => {
       await cluster.bootstrap({ nodeImage: 'some-image' })
 
       expect(runDetached).toHaveBeenCalledWith('some-image', {
-        args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
@@ -178,7 +174,6 @@ describe('Cluster', () => {
       ).toEqual('{"networkId":0}')
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
-        args: ['start'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',

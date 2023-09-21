@@ -147,7 +147,7 @@ export class Cluster {
 
     await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)
 
-    return new Node(this, containerName)
+    return node
   }
 
   async teardown(): Promise<void> {
