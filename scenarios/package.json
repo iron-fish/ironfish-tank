@@ -21,9 +21,8 @@
     "node": "18.x"
   },
   "dependencies": {
-    "fishtank": "0.1.0"
-  },
-  "devDependencies": {
+    "fishtank": "0.1.0",
+    "scenarios": "^0.1.0"
   },
   "scripts": {
     "build": "tsc -b",

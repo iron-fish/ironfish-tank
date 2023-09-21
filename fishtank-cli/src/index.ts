@@ -3,5 +3,3 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 export { run } from '@oclif/core'
 export * from './commands'
-export * from './simulations'
-export * from './simulator'

@@ -1,6 +1,6 @@
 {
   "name": "root",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "repository": "https://github.com/iron-fish/ironfish-tank",
   "private": true,
   "author": "Iron Fish <contact@ironfish.network> (https://ironfish.network)",
@@ -26,8 +26,8 @@
   "devDependencies": {
     "@ironfish/sdk": "1.9.0",
     "@types/jest": "29.2.4",
-    "@typescript-eslint/eslint-plugin": "4.28.1",
-    "@typescript-eslint/parser": "4.28.1",
+    "@typescript-eslint/eslint-plugin": "5.0.0",
+    "@typescript-eslint/parser": "5.0.0",
     "eslint": "7.29.0",
     "eslint-config-prettier": "8.3.0",
     "eslint-plugin-header": "3.1.1",

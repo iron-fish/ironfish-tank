@@ -29,6 +29,7 @@
     "@types/tar": "6.1.1",
     "chalk": "^4",
     "fishtank": "0.1.0",
+    "scenarios": "^0.1.0",
     "yup": "0.29.3"
   },
   "devDependencies": {

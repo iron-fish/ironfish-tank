@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { createRootLogger } from '@ironfish/sdk'
-import { CliUx, Command, Config } from '@oclif/core'
-import { SIMULATIONS } from '../../../scenarios'
+import { Command, Config } from '@oclif/core'
+import { SIMULATIONS } from 'scenarios'
 
-export abstract class Run extends Command {
+export abstract class Simulate extends Command {
   static description = 'Run a simulation from scenarios'
 
   static args = [
@@ -24,7 +24,7 @@ export abstract class Run extends Command {
   }
 
   async run(): Promise<void> {
-    const { args } = await this.parse(Run)
+    const { args } = await this.parse(Simulate)
 
     const simName = args.simulation as string
     const simulation = SIMULATIONS[simName]
@@ -37,7 +37,7 @@ export abstract class Run extends Command {
       return
     }
 
-    CliUx.ux.action.start(`running simulation ${simName}`)
+    logger.log(`running simulation ${simName}`)
 
     try {
       await simulation.simulate()
@@ -45,7 +45,6 @@ export abstract class Run extends Command {
       logger.error(`simulation encountered ${String(e)}, shutting down...`)
     }
 
-    CliUx.ux.action.stop(`stop simulation ${simName}`)
     this.exit(0)
   }
 }
