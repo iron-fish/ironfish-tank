@@ -2,8 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConfigOptions } from '@ironfish/sdk'
-import { promises } from 'fs'
-import { resolve } from 'path'
+import { existsSync, promises } from 'fs'
+import { tmpdir } from 'os'
+import { join, resolve } from 'path'
 import { Docker, Labels, RunOptions } from './backend'
 import * as naming from './naming'
 import { Node } from './node'
@@ -17,6 +18,11 @@ export const BOOTSTRAP_NODE_ROLE = 'bootstrap'
 export type BootstrapOptions = {
   nodeName?: string
   nodeImage?: string
+}
+export const CONTAINER_DATADIR = '/root/.ironfish'
+
+export type NetworkDefinition = {
+  id: number
 }
 
 export class Cluster {
@@ -69,6 +75,7 @@ export class Cluster {
     name: string
     image?: string
     config?: Partial<ConfigOptions>
+    networkDefinition?: Partial<NetworkDefinition>
   }): Promise<Node> {
     const extraArgs = []
     for (const bootstrapNode of await this.getBootstrapNodes()) {
@@ -81,6 +88,7 @@ export class Cluster {
     name: string
     image?: string
     config?: Partial<ConfigOptions>
+    networkDefinition?: Partial<NetworkDefinition>
     extraArgs?: string[]
     extraLabels?: Labels
   }): Promise<Node> {
@@ -89,26 +97,56 @@ export class Cluster {
     const containerName = naming.containerName(this, options.name)
 
     const runOptions: RunOptions = {
-      args: ['start', ...(options.extraArgs ?? [])],
       name: containerName,
       networks: [naming.networkName(this)],
       hostname: options.name,
       labels: { [CLUSTER_LABEL]: this.name, ...options.extraLabels },
     }
 
+    const args: string[] = ['start', ...(options.extraArgs ?? [])]
+
+    const dest = node.dataDir
+    if (options.config || options.networkDefinition) {
+      await promises.mkdir(dest, {
+        recursive: true,
+      })
+    }
+
     if (options.config) {
       const configString = JSON.stringify(options.config)
 
-      await promises.mkdir(node.dataDir, {
-        recursive: true,
-      })
+      await promises.writeFile(resolve(dest, 'config.json'), configString)
 
-      await promises.writeFile(resolve(node.dataDir, 'config.json'), configString)
+      if (runOptions.volumes === undefined) {
+        runOptions.volumes = new Map<string, string>([[dest, CONTAINER_DATADIR]])
+      } else {
+        runOptions.volumes.set(dest, CONTAINER_DATADIR)
+      }
+    }
 
-      runOptions.volumes = new Map<string, string>([[node.dataDir, '/root/.ironfish']])
+    if (options.networkDefinition) {
+      const networkDefinitionString = JSON.stringify(options.networkDefinition)
+
+      await promises.writeFile(resolve(dest, 'customNetwork.json'), networkDefinitionString)
+
+      let containerPath = CONTAINER_DATADIR
+      if (runOptions.volumes === undefined) {
+        runOptions.volumes = new Map<string, string>([[dest, containerPath]])
+      } else if (runOptions.volumes.has(dest)) {
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        containerPath = runOptions.volumes.get(dest)!
+      } else {
+        runOptions.volumes.set(dest, containerPath)
+      }
+      args.push(`--customNetwork=${resolve(containerPath, 'customNetwork.json')}`)
+    }
+
+    if (args.length > 1) {
+      runOptions.args = args
     }
 
     await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)
+
     return node
   }
 
@@ -121,5 +159,11 @@ export class Cluster {
 
     // Remove networks
     await this.backend.removeNetworks([naming.networkName(this)], { force: true })
+
+    // Remove cluster folder
+    const dest = join(tmpdir(), 'fishtank', this.name)
+    if (existsSync(dest)) {
+      await promises.rm(dest, { recursive: true })
+    }
   }
 }

@@ -25,7 +25,7 @@ export class Node {
   }
 
   get dataDir(): string {
-    return join(tmpdir(), 'fishtank', this.containerName, '.ironfish')
+    return join(tmpdir(), 'fishtank', this.cluster.name, this.name, '.ironfish')
   }
 
   get ipcSocketPath(): string {
