@@ -152,13 +152,22 @@ describe('Cluster', () => {
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const node = await cluster.spawn({ name: 'my-test-container' })
+      const dataDir = getDataDir('my-test-cluster', 'my-test-container')
 
+      expect(
+        await promises
+          .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
+          .then(JSON.parse),
+      ).toEqual({
+        networkId: 2,
+        bootstrapNodes: ['my-bootstrap-node'],
+      })
       expect(node.name).toEqual('my-test-container')
       expect(list).toHaveBeenCalledWith({
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
       })
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
-        args: ['start', '--bootstrap', 'my-bootstrap-node'],
+        args: ['start'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',

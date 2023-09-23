@@ -78,11 +78,11 @@ export class Cluster {
     internal?: Partial<InternalOptions>
     networkDefinition?: Partial<NetworkDefinition>
   }): Promise<Node> {
-    const extraArgs = []
-    for (const bootstrapNode of await this.getBootstrapNodes()) {
-      extraArgs.push('--bootstrap', bootstrapNode.name)
+    const config = options.config || {}
+    if (typeof config.bootstrapNodes === 'undefined') {
+      config.bootstrapNodes = (await this.getBootstrapNodes()).map((node) => node.name)
     }
-    return this.internalSpawn({ extraArgs, ...options })
+    return this.internalSpawn({ ...options, config })
   }
 
   private async internalSpawn(options: {
