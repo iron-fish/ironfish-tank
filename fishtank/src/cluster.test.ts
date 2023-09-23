@@ -18,6 +18,18 @@ const getVolumes = (clusterName: string, nodeName: string): Map<string, string> 
 }
 
 describe('Cluster', () => {
+  beforeAll(() => {
+    Docker.prototype['cmd'] = jest
+      .fn()
+      .mockImplementation((args: readonly string[]) =>
+        Promise.reject(
+          `Docker commands should not be executed directly in this test, got ${JSON.stringify(
+            args,
+          )}`,
+        ),
+      )
+  })
+
   describe('constructor', () => {
     it('refuses to create a cluster with an invalid name', () => {
       expect(() => new Cluster({ name: '' })).toThrow('Invalid name')
@@ -132,15 +144,16 @@ describe('Cluster', () => {
   })
 
   describe('spawn', () => {
-    let cluster: Cluster
-
     afterEach(async () => {
-      await cluster.teardown()
+      return promises.rm(join(tmpdir(), 'fishtank', 'my-test-cluster'), {
+        force: true,
+        recursive: true,
+      })
     })
 
     it('launches a detached container with the default image', async () => {
       const backend = new Docker()
-      cluster = new Cluster({ name: 'my-test-cluster', backend })
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       const list = jest
         .spyOn(backend, 'list')
@@ -178,8 +191,9 @@ describe('Cluster', () => {
 
     it('launches a detached container with the provided configuration', async () => {
       const backend = new Docker()
-      cluster = new Cluster({ name: 'my-test-cluster', backend })
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
+      jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const config = {
@@ -205,8 +219,9 @@ describe('Cluster', () => {
 
     it('launches a detached container with the provided internal settings', async () => {
       const backend = new Docker()
-      cluster = new Cluster({ name: 'my-test-cluster', backend })
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
+      jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const internal = {
@@ -232,8 +247,9 @@ describe('Cluster', () => {
 
     it('launches a detached container with custom network definition', async () => {
       const backend = new Docker()
-      cluster = new Cluster({ name: 'my-test-cluster', backend })
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
+      jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const networkDefinition = {
@@ -259,7 +275,7 @@ describe('Cluster', () => {
 
     it('defaults to DEVNET', async () => {
       const backend = new Docker()
-      cluster = new Cluster({ name: 'my-test-cluster', backend })
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
       jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
@@ -281,6 +297,7 @@ describe('Cluster', () => {
       const backend = new Docker()
       const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
+      jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
       jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const nodeConfig: Partial<ConfigOptions> = {
@@ -296,8 +313,10 @@ describe('Cluster', () => {
           { id: 'cccc', name: 'my-test-cluster_node-3', image: 'img' },
         ]),
       )
-
       const remove = jest.spyOn(backend, 'remove').mockReturnValue(Promise.resolve())
+      const removeNetworks = jest
+        .spyOn(backend, 'removeNetworks')
+        .mockReturnValue(Promise.resolve())
 
       await cluster.teardown()
 
@@ -308,6 +327,7 @@ describe('Cluster', () => {
         ['my-test-cluster_node-1', 'my-test-cluster_node-2', 'my-test-cluster_node-3'],
         { force: true, volumes: true },
       )
+      expect(removeNetworks).toHaveBeenCalledWith(['my-test-cluster'], { force: true })
 
       expect(existsSync(join(tmpdir(), 'fishtank', cluster.name))).toEqual(false)
     })
