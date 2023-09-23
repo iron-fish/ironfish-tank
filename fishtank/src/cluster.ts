@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { ConfigOptions } from '@ironfish/sdk'
+import { ConfigOptions, InternalOptions } from '@ironfish/sdk'
 import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -75,6 +75,7 @@ export class Cluster {
     name: string
     image?: string
     config?: Partial<ConfigOptions>
+    internal?: Partial<InternalOptions>
     networkDefinition?: Partial<NetworkDefinition>
   }): Promise<Node> {
     const extraArgs = []
@@ -88,6 +89,7 @@ export class Cluster {
     name: string
     image?: string
     config?: Partial<ConfigOptions>
+    internal?: Partial<InternalOptions>
     networkDefinition?: Partial<NetworkDefinition>
     extraArgs?: string[]
     extraLabels?: Labels
@@ -112,6 +114,13 @@ export class Cluster {
       await promises.writeFile(
         resolve(node.dataDir, 'config.json'),
         JSON.stringify(options.config),
+      )
+    }
+
+    if (options.internal) {
+      await promises.writeFile(
+        resolve(node.dataDir, 'internal.json'),
+        JSON.stringify(options.internal),
       )
     }
 

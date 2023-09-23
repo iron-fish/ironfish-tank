@@ -194,6 +194,33 @@ describe('Cluster', () => {
       })
     })
 
+    it('launches a detached container with the provided internal settings', async () => {
+      const backend = new Docker()
+      cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
+      const internal = {
+        rpcAuthToken: 'token',
+      }
+      await cluster.spawn({ name: 'my-test-container', internal })
+
+      const dataDir = getDataDir('my-test-cluster', 'my-test-container')
+      expect(
+        await promises
+          .readFile(resolve(dataDir, 'internal.json'), { encoding: 'utf8' })
+          .then(JSON.parse),
+      ).toEqual(internal)
+      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
+        name: 'my-test-cluster_my-test-container',
+        networks: ['my-test-cluster'],
+        hostname: 'my-test-container',
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+        volumes: getVolumes('my-test-cluster', 'my-test-container'),
+      })
+    })
+
     it('launches a detached container with custom network definition', async () => {
       const backend = new Docker()
       cluster = new Cluster({ name: 'my-test-cluster', backend })
