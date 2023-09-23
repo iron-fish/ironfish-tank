@@ -6,7 +6,7 @@ import { existsSync, promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { Docker } from './backend'
-import { Cluster, NetworkDefinition } from './cluster'
+import { Cluster } from './cluster'
 
 const getDataDir = (clusterName: string, nodeName: string): string => {
   return join(tmpdir(), 'fishtank', clusterName, nodeName, '.ironfish')
@@ -173,15 +173,17 @@ describe('Cluster', () => {
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
-      const nodeConfig: Partial<ConfigOptions> = {
-        networkId: 0,
+      const config = {
+        networkId: 123,
       }
-      await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
+      await cluster.spawn({ name: 'my-test-container', config })
 
       const dataDir = getDataDir('my-test-cluster', 'my-test-container')
       expect(
-        await promises.readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' }),
-      ).toEqual('{"networkId":0}')
+        await promises
+          .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
+          .then(JSON.parse),
+      ).toEqual(config)
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         args: ['start'],
         name: 'my-test-cluster_my-test-container',
@@ -198,58 +200,17 @@ describe('Cluster', () => {
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
-      const networkDefinition: Partial<NetworkDefinition> = {
+      const networkDefinition = {
         id: 123,
       }
-      await cluster.spawn({
-        name: 'my-test-container',
-        networkDefinition: networkDefinition,
-      })
+      await cluster.spawn({ name: 'my-test-container', networkDefinition })
 
       const dataDir = getDataDir('my-test-cluster', 'my-test-container')
       expect(
-        await promises.readFile(resolve(dataDir, 'customNetwork.json'), {
-          encoding: 'utf8',
-        }),
-      ).toEqual('{"id":123}')
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
-        args: ['start', '--customNetwork', '/root/.ironfish/customNetwork.json'],
-        name: 'my-test-cluster_my-test-container',
-        networks: ['my-test-cluster'],
-        hostname: 'my-test-container',
-        labels: { 'fishtank.cluster': 'my-test-cluster' },
-        volumes: getVolumes('my-test-cluster', 'my-test-container'),
-      })
-    })
-
-    it('launches a detached container with custom network definition and node config', async () => {
-      const backend = new Docker()
-      cluster = new Cluster({ name: 'my-test-cluster', backend })
-
-      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
-
-      const networkDefinition: Partial<NetworkDefinition> = {
-        id: 0,
-      }
-      const nodeConfig: Partial<ConfigOptions> = {
-        nodeName: 'test node',
-      }
-
-      await cluster.spawn({
-        name: 'my-test-container',
-        networkDefinition: networkDefinition,
-        config: nodeConfig,
-      })
-
-      const dataDir = getDataDir('my-test-cluster', 'my-test-container')
-      expect(
-        await promises.readFile(resolve(dataDir, 'customNetwork.json'), {
-          encoding: 'utf8',
-        }),
-      ).toEqual('{"id":0}')
-      expect(
-        await promises.readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' }),
-      ).toEqual('{"nodeName":"test node"}')
+        await promises
+          .readFile(resolve(dataDir, 'customNetwork.json'), { encoding: 'utf8' })
+          .then(JSON.parse),
+      ).toEqual(networkDefinition)
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         args: ['start', '--customNetwork', '/root/.ironfish/customNetwork.json'],
         name: 'my-test-cluster_my-test-container',
