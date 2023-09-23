@@ -247,6 +247,24 @@ describe('Cluster', () => {
         volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
     })
+
+    it('defaults to DEVNET', async () => {
+      const backend = new Docker()
+      cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
+      jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+      await cluster.spawn({ name: 'my-test-container' })
+
+      const dataDir = getDataDir('my-test-cluster', 'my-test-container')
+      expect(
+        await promises
+          .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
+          .then(JSON.parse),
+      ).toMatchObject({
+        networkId: 2,
+      })
+    })
   })
 
   describe('teardown', () => {

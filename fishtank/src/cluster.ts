@@ -110,12 +110,10 @@ export class Cluster {
     await promises.mkdir(node.dataDir, { recursive: true })
     runOptions.volumes.set(node.dataDir, CONTAINER_DATADIR)
 
-    if (options.config) {
-      await promises.writeFile(
-        resolve(node.dataDir, 'config.json'),
-        JSON.stringify(options.config),
-      )
-    }
+    const config = options.config || {}
+    config.networkId ??= 2
+
+    await promises.writeFile(resolve(node.dataDir, 'config.json'), JSON.stringify(config))
 
     if (options.internal) {
       await promises.writeFile(
