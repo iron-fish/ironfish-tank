@@ -1,12 +1,14 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { IronfishSdk, RpcClient } from '@ironfish/sdk'
+import { IronfishSdk, RpcSocketClient } from '@ironfish/sdk'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { Docker } from './backend'
 import { Cluster } from './cluster'
 import * as naming from './naming'
+
+export const INTERNAL_RPC_TCP_PORT = 8020
 
 export class Node {
   public readonly cluster: Cluster
@@ -28,19 +30,28 @@ export class Node {
     return join(tmpdir(), 'fishtank', this.cluster.name, this.name, '.ironfish')
   }
 
-  get ipcSocketPath(): string {
-    return join(this.dataDir, 'ironfish.ipc')
+  async getRpcTcpPort(): Promise<number> {
+    const info = await this.backend.inspect(this.containerName)
+    const port = info.ports?.tcp.get(INTERNAL_RPC_TCP_PORT)
+    if (port) {
+      return port
+    } else {
+      throw new Error('Node is not exposing any RPC port')
+    }
   }
 
-  async connectRpc(): Promise<RpcClient> {
+  async connectRpc(): Promise<RpcSocketClient> {
+    const rpcTcpPort = await this.getRpcTcpPort()
     const sdk = await IronfishSdk.init({
       dataDir: this.dataDir,
       configOverrides: {
-        enableRpcTcp: false,
-        ipcPath: this.ipcSocketPath,
+        enableRpcTcp: true,
+        enableRpcIpc: false,
+        enableRpcTls: false,
+        rpcTcpPort,
       },
     })
-    return sdk.connectRpc(false, true)
+    return sdk.connectRpc(false, true) as Promise<RpcSocketClient>
   }
 
   remove(): Promise<void> {

@@ -31,6 +31,7 @@ export abstract class Start extends Command {
     const { args, flags } = await this.parse(Start)
     const clusterName = args.name as string
     const cluster = new Cluster({ name: clusterName })
-    return cluster.init({ bootstrap: !flags.noBootstrap })
+    await cluster.init({ bootstrap: !flags.noBootstrap })
+    this.exit(0)
   }
 }

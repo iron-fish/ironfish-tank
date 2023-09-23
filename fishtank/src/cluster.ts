@@ -7,7 +7,7 @@ import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { Docker, Labels } from './backend'
 import * as naming from './naming'
-import { Node } from './node'
+import { INTERNAL_RPC_TCP_PORT, Node } from './node'
 
 export const DEFAULT_IMAGE = 'ironfish:latest'
 export const DEFAULT_BOOTSTRAP_NODE_NAME = 'bootstrap'
@@ -39,7 +39,6 @@ export class Cluster {
   async init(options?: { bootstrap?: boolean | BootstrapOptions }): Promise<void> {
     await this.backend.createNetwork(naming.networkName(this), {
       attachable: true,
-      internal: true,
       labels: { [CLUSTER_LABEL]: this.name },
     })
 
@@ -103,6 +102,7 @@ export class Cluster {
       name: containerName,
       networks: [naming.networkName(this)],
       hostname: options.name,
+      ports: { tcp: [INTERNAL_RPC_TCP_PORT] },
       labels: { [CLUSTER_LABEL]: this.name, ...options.extraLabels },
       volumes: new Map<string, string>(),
     }
@@ -112,6 +112,9 @@ export class Cluster {
 
     const config = options.config || {}
     config.networkId ??= 2
+    config.enableRpcTcp ??= true
+    config.enableRpcTls ??= false
+    config.rpcTcpHost ??= ''
 
     await promises.writeFile(resolve(node.dataDir, 'config.json'), JSON.stringify(config))
 

@@ -21,6 +21,9 @@ export type RunOptions = {
   name?: string
   networks?: readonly string[]
   hostname?: string
+  ports?: {
+    tcp?: readonly number[]
+  }
   labels?: Labels
   volumes?: Map<string, string>
 }
@@ -54,7 +57,15 @@ export class DockerError extends Error {
 
 export type Labels = { [key: string]: string }
 
-export type ContainerDetails = { id: string; name: string; image: string }
+export type ContainerDetails = {
+  id: string
+  name: string
+  image: string
+  ports?: {
+    tcp: Map<number, number>
+    udp: Map<number, number>
+  }
+}
 
 const labelsToArgs = (labels: Labels): string[] => {
   const args = []
@@ -99,6 +110,11 @@ export class Docker {
     if (options?.hostname) {
       runArgs.push('--hostname', options.hostname)
     }
+    if (options?.ports?.tcp) {
+      for (const port of options.ports.tcp) {
+        runArgs.push('--publish', `${port}`)
+      }
+    }
     if (options?.volumes) {
       for (const entry of options.volumes.entries()) {
         runArgs.push('--volume', `${entry[0]}:${entry[1]}`)
@@ -112,6 +128,40 @@ export class Docker {
       runArgs.push(...options.args)
     }
     await this.cmd(runArgs, {})
+  }
+
+  async inspect(identifier: string): Promise<ContainerDetails> {
+    const inspectArgs = ['inspect', '--format=json', identifier]
+    const { stdout } = await this.cmd(inspectArgs, {})
+    const list = JSON.parse(stdout) as {
+      Id: string
+      Name: string
+      Config: { Image: string }
+      NetworkSettings: {
+        Ports: { [portProtocol: string]: { HostIp: string; HostPort: string }[] | null }
+      }
+    }[]
+    if (!list) {
+      throw new Error(`Container not found: ${identifier}`)
+    }
+    const info = list[0]
+    const ports = { tcp: new Map<number, number>(), udp: new Map<number, number>() }
+    for (const portProtocol in info.NetworkSettings.Ports) {
+      const [port, protocol] = portProtocol.split('/')
+      const bindings = info.NetworkSettings.Ports[portProtocol]
+      if (protocol in ports && bindings) {
+        const key = protocol as 'tcp' | 'udp'
+        for (const binding of bindings) {
+          ports[key].set(Number(port), Number(binding.HostPort))
+        }
+      }
+    }
+    return {
+      id: info.Id,
+      name: info.Name,
+      image: info.Config.Image,
+      ports,
+    }
   }
 
   async list(filter?: { labels?: Labels }): Promise<ContainerDetails[]> {

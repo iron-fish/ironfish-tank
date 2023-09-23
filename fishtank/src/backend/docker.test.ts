@@ -159,6 +159,75 @@ describe('Docker Backend', () => {
     })
   })
 
+  describe('inspect', () => {
+    it('returns information about the requested container', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn().mockReturnValue({
+        stdout:
+          '[{"Id":"b19845e77e083ea8ebc191efe3d3bf52e9835fefee04e52582890ef7d8b3821e","Name":"test-cluster_test-node","Config":{"Image":"ironfish:1.3.2"},"NetworkSettings":{"Ports":{"8020/tcp":[{"HostPort":"12345"}]}}}]',
+      })
+
+      const info = await docker.inspect('test-cluster_test-node')
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['inspect', '--format=json', 'test-cluster_test-node'],
+        {},
+      )
+      expect(info).toEqual({
+        id: 'b19845e77e083ea8ebc191efe3d3bf52e9835fefee04e52582890ef7d8b3821e',
+        name: 'test-cluster_test-node',
+        image: 'ironfish:1.3.2',
+        ports: {
+          tcp: new Map<number, number>([[8020, 12345]]),
+          udp: new Map<number, number>(),
+        },
+      })
+    })
+
+    it('filters containers by label', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn().mockReturnValue({
+        stdout:
+          '{"ID":"aaaa","Image":"image-1","Names":"name-1"}\n' +
+          '{"ID":"bbbb","Image":"image-2","Names":"name-2"}\n',
+      })
+
+      const containers = await docker.list({
+        labels: {
+          'key-1': 'value-1',
+          'key-2': 'value-2',
+          'key-3': 'value-3',
+        },
+      })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        [
+          'ps',
+          '--no-trunc',
+          '--all',
+          '--format=json',
+          '--filter',
+          'label=key-1=value-1',
+          '--filter',
+          'label=key-2=value-2',
+          '--filter',
+          'label=key-3=value-3',
+        ],
+        {},
+      )
+      expect(containers).toEqual([
+        {
+          id: 'aaaa',
+          name: 'name-1',
+          image: 'image-1',
+        },
+        {
+          id: 'bbbb',
+          name: 'name-2',
+          image: 'image-2',
+        },
+      ])
+    })
+  })
+
   describe('list', () => {
     it('returns information about all containers', async () => {
       const docker = new Docker()

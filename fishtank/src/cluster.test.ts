@@ -54,7 +54,6 @@ describe('Cluster', () => {
 
       expect(createNetwork).toHaveBeenCalledWith('my-test-cluster', {
         attachable: true,
-        internal: true,
         labels: { 'fishtank.cluster': 'my-test-cluster' },
       })
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
@@ -62,6 +61,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
+        ports: { tcp: [8020] },
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
         volumes: getVolumes('my-test-cluster', 'bootstrap'),
       })
@@ -80,7 +80,6 @@ describe('Cluster', () => {
 
       expect(createNetwork).toHaveBeenCalledWith('my-test-cluster', {
         attachable: true,
-        internal: true,
         labels: { 'fishtank.cluster': 'my-test-cluster' },
       })
       expect(runDetached).not.toHaveBeenCalled()
@@ -101,6 +100,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
+        ports: { tcp: [8020] },
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
         volumes: getVolumes('my-test-cluster', 'bootstrap'),
       })
@@ -119,6 +119,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_my-bootstrap-node',
         networks: ['my-test-cluster'],
         hostname: 'my-bootstrap-node',
+        ports: { tcp: [8020] },
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
         volumes: getVolumes('my-test-cluster', 'my-bootstrap-node'),
       })
@@ -137,6 +138,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
+        ports: { tcp: [8020] },
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
         volumes: getVolumes('my-test-cluster', 'bootstrap'),
       })
@@ -173,6 +175,9 @@ describe('Cluster', () => {
           .then(JSON.parse),
       ).toEqual({
         networkId: 2,
+        enableRpcTcp: true,
+        enableRpcTls: false,
+        rpcTcpHost: '',
         bootstrapNodes: ['my-bootstrap-node'],
       })
       expect(node.name).toEqual('my-test-container')
@@ -184,6 +189,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
+        ports: { tcp: [8020] },
         labels: { 'fishtank.cluster': 'my-test-cluster' },
         volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
@@ -212,6 +218,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
+        ports: { tcp: [8020] },
         labels: { 'fishtank.cluster': 'my-test-cluster' },
         volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
@@ -240,6 +247,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
+        ports: { tcp: [8020] },
         labels: { 'fishtank.cluster': 'my-test-cluster' },
         volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
@@ -268,6 +276,7 @@ describe('Cluster', () => {
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
+        ports: { tcp: [8020] },
         labels: { 'fishtank.cluster': 'my-test-cluster' },
         volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
