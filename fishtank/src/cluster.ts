@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConfigOptions } from '@ironfish/sdk'
-import { existsSync, promises } from 'fs'
+import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { Docker, Labels, RunOptions } from './backend'
@@ -162,8 +162,6 @@ export class Cluster {
 
     // Remove cluster folder
     const dest = join(tmpdir(), 'fishtank', this.name)
-    if (existsSync(dest)) {
-      await promises.rm(dest, { recursive: true })
-    }
+    await promises.rm(dest, { force: true, recursive: true })
   }
 }
