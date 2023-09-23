@@ -8,6 +8,15 @@ import { join, resolve } from 'path'
 import { Docker } from './backend'
 import { Cluster, NetworkDefinition } from './cluster'
 
+const getDataDir = (clusterName: string, nodeName: string): string => {
+  return join(tmpdir(), 'fishtank', clusterName, nodeName, '.ironfish')
+}
+
+const getVolumes = (clusterName: string, nodeName: string): Map<string, string> => {
+  const dataDir = getDataDir(clusterName, nodeName)
+  return new Map<string, string>([[dataDir, '/root/.ironfish']])
+}
+
 describe('Cluster', () => {
   describe('constructor', () => {
     it('refuses to create a cluster with an invalid name', () => {
@@ -37,10 +46,12 @@ describe('Cluster', () => {
         labels: { 'fishtank.cluster': 'my-test-cluster' },
       })
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+        volumes: getVolumes('my-test-cluster', 'bootstrap'),
       })
     })
 
@@ -74,10 +85,12 @@ describe('Cluster', () => {
       await cluster.bootstrap()
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+        volumes: getVolumes('my-test-cluster', 'bootstrap'),
       })
     })
 
@@ -90,10 +103,12 @@ describe('Cluster', () => {
       await cluster.bootstrap({ nodeName: 'my-bootstrap-node' })
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
         name: 'my-test-cluster_my-bootstrap-node',
         networks: ['my-test-cluster'],
         hostname: 'my-bootstrap-node',
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+        volumes: getVolumes('my-test-cluster', 'my-bootstrap-node'),
       })
     })
 
@@ -106,10 +121,12 @@ describe('Cluster', () => {
       await cluster.bootstrap({ nodeImage: 'some-image' })
 
       expect(runDetached).toHaveBeenCalledWith('some-image', {
+        args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+        volumes: getVolumes('my-test-cluster', 'bootstrap'),
       })
     })
   })
@@ -146,6 +163,7 @@ describe('Cluster', () => {
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
         labels: { 'fishtank.cluster': 'my-test-cluster' },
+        volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
     })
 
@@ -160,25 +178,17 @@ describe('Cluster', () => {
       }
       await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
 
-      const containerDatadir = join(
-        tmpdir(),
-        'fishtank',
-        'my-test-cluster',
-        'my-test-container',
-        '.ironfish',
-      )
-      const volumes = new Map<string, string>([[containerDatadir, '/root/.ironfish']])
-
+      const dataDir = getDataDir('my-test-cluster', 'my-test-container')
       expect(
-        await promises.readFile(resolve(containerDatadir, 'config.json'), { encoding: 'utf8' }),
+        await promises.readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' }),
       ).toEqual('{"networkId":0}')
-
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
         labels: { 'fishtank.cluster': 'my-test-cluster' },
-        volumes: volumes,
+        volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
     })
 
@@ -191,34 +201,24 @@ describe('Cluster', () => {
       const networkDefinition: Partial<NetworkDefinition> = {
         id: 123,
       }
-
       await cluster.spawn({
         name: 'my-test-container',
         networkDefinition: networkDefinition,
       })
 
-      const containerDatadir = join(
-        tmpdir(),
-        'fishtank',
-        'my-test-cluster',
-        'my-test-container',
-        '.ironfish',
-      )
-      const volumes = new Map<string, string>([[containerDatadir, '/root/.ironfish']])
-
+      const dataDir = getDataDir('my-test-cluster', 'my-test-container')
       expect(
-        await promises.readFile(resolve(containerDatadir, 'customNetwork.json'), {
+        await promises.readFile(resolve(dataDir, 'customNetwork.json'), {
           encoding: 'utf8',
         }),
       ).toEqual('{"id":123}')
-
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start', '--customNetwork', '/root/.ironfish/customNetwork.json'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
         labels: { 'fishtank.cluster': 'my-test-cluster' },
-        volumes: volumes,
-        args: ['start', '--customNetwork=/root/.ironfish/customNetwork.json'],
+        volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
     })
 
@@ -241,32 +241,22 @@ describe('Cluster', () => {
         config: nodeConfig,
       })
 
-      const containerDatadir = join(
-        tmpdir(),
-        'fishtank',
-        'my-test-cluster',
-        'my-test-container',
-        '.ironfish',
-      )
-      const volumes = new Map<string, string>([[containerDatadir, '/root/.ironfish']])
-
+      const dataDir = getDataDir('my-test-cluster', 'my-test-container')
       expect(
-        await promises.readFile(resolve(containerDatadir, 'customNetwork.json'), {
+        await promises.readFile(resolve(dataDir, 'customNetwork.json'), {
           encoding: 'utf8',
         }),
       ).toEqual('{"id":0}')
-
       expect(
-        await promises.readFile(resolve(containerDatadir, 'config.json'), { encoding: 'utf8' }),
+        await promises.readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' }),
       ).toEqual('{"nodeName":"test node"}')
-
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start', '--customNetwork', '/root/.ironfish/customNetwork.json'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
         labels: { 'fishtank.cluster': 'my-test-cluster' },
-        volumes: volumes,
-        args: ['start', '--customNetwork=/root/.ironfish/customNetwork.json'],
+        volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
     })
   })
