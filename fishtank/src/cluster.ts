@@ -19,6 +19,7 @@ export const CONTAINER_DATADIR = '/root/.ironfish'
 export type BootstrapOptions = {
   nodeName?: string
   nodeImage?: string
+  waitForStart?: boolean
 }
 
 export type NetworkDefinition = {
@@ -76,6 +77,7 @@ export class Cluster {
     config?: Partial<ConfigOptions>
     internal?: Partial<InternalOptions>
     networkDefinition?: Partial<NetworkDefinition>
+    waitForStart?: boolean
   }): Promise<Node> {
     const config = options.config || {}
     if (typeof config.bootstrapNodes === 'undefined') {
@@ -92,6 +94,7 @@ export class Cluster {
     networkDefinition?: Partial<NetworkDefinition>
     extraArgs?: string[]
     extraLabels?: Labels
+    waitForStart?: boolean
   }): Promise<Node> {
     naming.assertValidName(options.name)
     const node = new Node(this, options.name)
@@ -134,6 +137,10 @@ export class Cluster {
     }
 
     await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)
+
+    if (options.waitForStart ?? true) {
+      await node.waitForStart()
+    }
 
     return node
   }

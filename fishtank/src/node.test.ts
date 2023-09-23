@@ -28,6 +28,10 @@ const withFullNode = async (
 }
 
 describe('Node', () => {
+  beforeEach(() => {
+    Node.prototype.waitForStart = jest.fn().mockReturnValue(Promise.resolve())
+  })
+
   describe('connectRpc', () => {
     it('connects to the node IPC socket', async () => {
       const backend = new Docker()

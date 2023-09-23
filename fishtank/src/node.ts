@@ -8,7 +8,14 @@ import { Docker } from './backend'
 import { Cluster } from './cluster'
 import * as naming from './naming'
 
+const DEFAULT_WAIT_TIMEOUT = 5 * 1000 // 5 seconds
+const WAIT_POLL_INTERVAL = 200 // 0.2 seconds
+
 export const INTERNAL_RPC_TCP_PORT = 8020
+
+export const sleep = (time: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, time))
+}
 
 export class Node {
   public readonly cluster: Cluster
@@ -52,6 +59,46 @@ export class Node {
       },
     })
     return sdk.connectRpc(false, true) as Promise<RpcSocketClient>
+  }
+
+  async getNodeStatus(): Promise<'started' | 'stopped' | 'error'> {
+    let rpc
+    try {
+      rpc = await this.connectRpc()
+    } catch {
+      return 'stopped'
+    }
+    try {
+      const status = await rpc.node.getStatus()
+      return status.content.node.status
+    } catch {
+      return 'error'
+    } finally {
+      rpc.close()
+    }
+  }
+
+  async isStarted(): Promise<boolean> {
+    return (await this.getNodeStatus()) === 'started'
+  }
+
+  async waitForStart(options?: { timeout?: number }): Promise<void> {
+    let stop = false
+    const timeout = options?.timeout ?? DEFAULT_WAIT_TIMEOUT
+    const timer = setTimeout(() => {
+      stop = true
+    }, timeout)
+    try {
+      while (!stop) {
+        if (await this.isStarted()) {
+          return
+        }
+        await sleep(WAIT_POLL_INTERVAL)
+      }
+    } finally {
+      clearTimeout(timer)
+    }
+    throw new Error(`Timeout of ${timeout}ms exceeded`)
   }
 
   remove(): Promise<void> {

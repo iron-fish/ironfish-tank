@@ -7,6 +7,7 @@ import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { Docker } from './backend'
 import { Cluster } from './cluster'
+import { Node } from './node'
 
 const getDataDir = (clusterName: string, nodeName: string): string => {
   return join(tmpdir(), 'fishtank', clusterName, nodeName, '.ironfish')
@@ -28,6 +29,10 @@ describe('Cluster', () => {
           )}`,
         ),
       )
+  })
+
+  beforeAll(() => {
+    Node.prototype.waitForStart = jest.fn().mockReturnValue(Promise.resolve())
   })
 
   describe('constructor', () => {
