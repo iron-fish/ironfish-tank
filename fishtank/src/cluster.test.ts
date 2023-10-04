@@ -46,7 +46,7 @@ describe('Cluster', () => {
   })
 
   describe('init', () => {
-    it('creates the network and launches a bootstrap node', async () => {
+    it('creates the network, launches a bootstrap node, and initializes the chain', async () => {
       const backend = new Docker()
       const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
@@ -54,6 +54,10 @@ describe('Cluster', () => {
         .spyOn(backend, 'createNetwork')
         .mockReturnValue(Promise.resolve())
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+      const mineUntil = jest
+        .spyOn(Node.prototype, 'mineUntil')
+        .mockClear()
+        .mockReturnValue(Promise.resolve())
 
       await cluster.init()
 
@@ -70,6 +74,7 @@ describe('Cluster', () => {
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
         volumes: getVolumes('my-test-cluster', 'bootstrap'),
       })
+      expect(mineUntil).toHaveBeenCalledWith({ blockSequence: 2 })
     })
 
     it('only creates the network if bootstrap was not requested', async () => {
@@ -92,11 +97,15 @@ describe('Cluster', () => {
   })
 
   describe('bootstrap', () => {
-    it('launches a bootstrap node', async () => {
+    it('launches a bootstrap node, and initializes the chain', async () => {
       const backend = new Docker()
       const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+      const mineUntil = jest
+        .spyOn(Node.prototype, 'mineUntil')
+        .mockClear()
+        .mockReturnValue(Promise.resolve())
 
       await cluster.bootstrap()
 
@@ -109,6 +118,31 @@ describe('Cluster', () => {
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
         volumes: getVolumes('my-test-cluster', 'bootstrap'),
       })
+      expect(mineUntil).toHaveBeenCalledWith({ blockSequence: 2 })
+    })
+
+    it('skips initialization of the chain if not requested', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+      const mineUntil = jest
+        .spyOn(Node.prototype, 'mineUntil')
+        .mockClear()
+        .mockReturnValue(Promise.resolve())
+
+      await cluster.bootstrap({ initChain: false })
+
+      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+        args: ['start'],
+        name: 'my-test-cluster_bootstrap',
+        networks: ['my-test-cluster'],
+        hostname: 'bootstrap',
+        ports: { tcp: [8020] },
+        labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
+        volumes: getVolumes('my-test-cluster', 'bootstrap'),
+      })
+      expect(mineUntil).not.toHaveBeenCalled()
     })
 
     it('launches a bootstrap node with the given name', async () => {
@@ -117,7 +151,7 @@ describe('Cluster', () => {
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
-      await cluster.bootstrap({ nodeName: 'my-bootstrap-node' })
+      await cluster.bootstrap({ nodeName: 'my-bootstrap-node', initChain: false })
 
       expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
         args: ['start'],
@@ -136,7 +170,7 @@ describe('Cluster', () => {
 
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
-      await cluster.bootstrap({ nodeImage: 'some-image' })
+      await cluster.bootstrap({ nodeImage: 'some-image', initChain: false })
 
       expect(runDetached).toHaveBeenCalledWith('some-image', {
         args: ['start'],

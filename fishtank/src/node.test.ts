@@ -92,6 +92,77 @@ describe('Node', () => {
     })
   })
 
+  describe('mineUntil', () => {
+    describe('with blockSequence', () => {
+      it('mines until the condition is satisfied', async () => {
+        const backend = new Docker()
+        const cluster = new Cluster({ name: 'my-test-cluster', backend })
+        const node = new Node(cluster, 'my-test-node')
+
+        const getStatus = jest
+          .fn()
+          .mockReturnValueOnce(
+            Promise.resolve({
+              content: { blockchain: { head: { sequence: 100 } } },
+            }),
+          )
+          .mockReturnValueOnce(
+            Promise.resolve({
+              content: { blockchain: { head: { sequence: 200 } } },
+            }),
+          )
+        const rpc = { node: { getStatus: getStatus } }
+        node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
+        node.getImage = jest.fn().mockReturnValue(Promise.resolve('some-image'))
+
+        const runDetached = jest
+          .spyOn(backend, 'runDetached')
+          .mockReturnValue(Promise.resolve())
+
+        await node.mineUntil({ blockSequence: 123 })
+
+        expect(runDetached).toHaveBeenCalledWith(
+          'some-image',
+          expect.objectContaining({
+            args: [
+              'miners:start',
+              '--rpc.tcp',
+              '--rpc.tcp.host',
+              'my-test-node',
+              '--no-rpc.tcp.tls',
+            ],
+            labels: {
+              ['fishtank.cluster']: 'my-test-cluster',
+            },
+            networks: ['my-test-cluster'],
+          }),
+        )
+      })
+
+      it('does not run a miner if the condition is already satisfied', async () => {
+        const backend = new Docker()
+        const cluster = new Cluster({ name: 'my-test-cluster', backend })
+        const node = new Node(cluster, 'my-test-node')
+
+        const getStatus = jest.fn().mockReturnValue(
+          Promise.resolve({
+            content: { blockchain: { head: { sequence: 123 } } },
+          }),
+        )
+        const rpc = { node: { getStatus: getStatus } }
+        node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
+
+        const runDetached = jest
+          .spyOn(backend, 'runDetached')
+          .mockReturnValue(Promise.resolve())
+
+        await node.mineUntil({ blockSequence: 123 })
+
+        expect(runDetached).not.toHaveBeenCalled()
+      })
+    })
+  })
+
   describe('remove', () => {
     it('forcefully removes the container and all its volumes', async () => {
       const backend = new Docker()

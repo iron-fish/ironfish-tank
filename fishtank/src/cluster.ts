@@ -20,6 +20,7 @@ export type BootstrapOptions = {
   nodeName?: string
   nodeImage?: string
   waitForStart?: boolean
+  initChain?: boolean
 }
 
 export type NetworkDefinition = {
@@ -51,13 +52,18 @@ export class Cluster {
   }
 
   async bootstrap(options?: BootstrapOptions): Promise<void> {
-    await this.internalSpawn({
+    const node = await this.internalSpawn({
       name: options?.nodeName ?? DEFAULT_BOOTSTRAP_NODE_NAME,
       image: options?.nodeImage,
+      config: { miningForce: true },
       extraLabels: {
         [NODE_ROLE_LABEL]: BOOTSTRAP_NODE_ROLE,
       },
     })
+
+    if (typeof options?.initChain === 'undefined' || options?.initChain === true) {
+      await node.mineUntil({ blockSequence: 2 })
+    }
   }
 
   private async getBootstrapNodes(): Promise<Node[]> {
