@@ -93,6 +93,56 @@ describe('Node', () => {
   })
 
   describe('mineUntil', () => {
+    const checkMiningProcess = (runDetached: jest.SpyInstance, remove: jest.SpyInstance) => {
+      expect(runDetached).toHaveBeenCalledWith(
+        'some-image',
+        expect.objectContaining({
+          name: expect.stringMatching(/^my-test-cluster_my-test-node-pool-/),
+          args: [
+            'miners:pools:start',
+            '--rpc.tcp',
+            '--rpc.tcp.host',
+            'my-test-node',
+            '--no-rpc.tcp.tls',
+          ],
+          labels: {
+            ['fishtank.cluster']: 'my-test-cluster',
+          },
+          networks: ['my-test-cluster'],
+          hostname: expect.stringMatching(/^my-test-node-pool-/),
+        }),
+      )
+
+      expect(runDetached).toHaveBeenCalledWith(
+        'some-image',
+        expect.objectContaining({
+          name: expect.stringMatching(/^my-test-cluster_my-test-node-miner-/),
+          args: [
+            'miners:start',
+            '--rpc.tcp',
+            '--rpc.tcp.host',
+            'my-test-node',
+            '--no-rpc.tcp.tls',
+            '--pool',
+            expect.stringMatching(/^my-test-node-pool-/),
+          ],
+          labels: {
+            ['fishtank.cluster']: 'my-test-cluster',
+          },
+          networks: ['my-test-cluster'],
+        }),
+      )
+
+      expect(remove).toHaveBeenCalledWith(
+        [expect.stringMatching(/^my-test-cluster_my-test-node-pool-/)],
+        { force: true },
+      )
+      expect(remove).toHaveBeenCalledWith(
+        [expect.stringMatching(/^my-test-cluster_my-test-node-miner-/)],
+        { force: true },
+      )
+    }
+
     describe('with blockSequence', () => {
       it('mines until the condition is satisfied', async () => {
         const backend = new Docker()
@@ -111,7 +161,7 @@ describe('Node', () => {
               content: { blockchain: { head: { sequence: 200 } } },
             }),
           )
-        const rpc = { node: { getStatus: getStatus } }
+        const rpc = { node: { getStatus } }
         node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
         node.getImage = jest.fn().mockReturnValue(Promise.resolve('some-image'))
 
@@ -122,53 +172,8 @@ describe('Node', () => {
 
         await node.mineUntil({ blockSequence: 123 })
 
-        expect(runDetached).toHaveBeenCalledWith(
-          'some-image',
-          expect.objectContaining({
-            name: expect.stringMatching(/^my-test-cluster_my-test-node-pool-/),
-            args: [
-              'miners:pools:start',
-              '--rpc.tcp',
-              '--rpc.tcp.host',
-              'my-test-node',
-              '--no-rpc.tcp.tls',
-            ],
-            labels: {
-              ['fishtank.cluster']: 'my-test-cluster',
-            },
-            networks: ['my-test-cluster'],
-            hostname: expect.stringMatching(/^my-test-node-pool-/),
-          }),
-        )
-
-        expect(runDetached).toHaveBeenCalledWith(
-          'some-image',
-          expect.objectContaining({
-            name: expect.stringMatching(/^my-test-cluster_my-test-node-miner-/),
-            args: [
-              'miners:start',
-              '--rpc.tcp',
-              '--rpc.tcp.host',
-              'my-test-node',
-              '--no-rpc.tcp.tls',
-              '--pool',
-              expect.stringMatching(/^my-test-node-pool-/),
-            ],
-            labels: {
-              ['fishtank.cluster']: 'my-test-cluster',
-            },
-            networks: ['my-test-cluster'],
-          }),
-        )
-
-        expect(remove).toHaveBeenCalledWith(
-          [expect.stringMatching(/^my-test-cluster_my-test-node-pool-/)],
-          { force: true },
-        )
-        expect(remove).toHaveBeenCalledWith(
-          [expect.stringMatching(/^my-test-cluster_my-test-node-miner-/)],
-          { force: true },
-        )
+        checkMiningProcess(runDetached, remove)
+        expect(getStatus).toHaveBeenCalledTimes(2)
       })
 
       it('does not run a miner if the condition is already satisfied', async () => {
@@ -181,7 +186,7 @@ describe('Node', () => {
             content: { blockchain: { head: { sequence: 123 } } },
           }),
         )
-        const rpc = { node: { getStatus: getStatus } }
+        const rpc = { node: { getStatus } }
         node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
 
         const runDetached = jest
@@ -191,6 +196,57 @@ describe('Node', () => {
         await node.mineUntil({ blockSequence: 123 })
 
         expect(runDetached).not.toHaveBeenCalled()
+        expect(getStatus).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    describe('with transactionMined', () => {
+      it('mines until the condition is satisfied', async () => {
+        const backend = new Docker()
+        const cluster = new Cluster({ name: 'my-test-cluster', backend })
+        const node = new Node(cluster, 'my-test-node')
+
+        const waitForEnd = jest
+          .fn()
+          .mockReturnValueOnce(Promise.reject({ status: 404 }))
+          .mockReturnValueOnce(Promise.resolve({}))
+        const getTransaction = jest.fn().mockReturnValue({ waitForEnd })
+        const rpc = { chain: { getTransaction } }
+        node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
+        node.getImage = jest.fn().mockReturnValue(Promise.resolve('some-image'))
+
+        const runDetached = jest
+          .spyOn(backend, 'runDetached')
+          .mockReturnValue(Promise.resolve())
+        const remove = jest.spyOn(backend, 'remove').mockReturnValue(Promise.resolve())
+
+        await node.mineUntil({ transactionMined: 'abcdef' })
+
+        checkMiningProcess(runDetached, remove)
+        expect(getTransaction).toHaveBeenCalledTimes(2)
+        expect(getTransaction).toHaveBeenCalledWith({ transactionHash: 'abcdef' })
+        expect(getTransaction).toHaveBeenCalledWith({ transactionHash: 'abcdef' })
+      })
+
+      it('does not run a miner if the condition is already satisfied', async () => {
+        const backend = new Docker()
+        const cluster = new Cluster({ name: 'my-test-cluster', backend })
+        const node = new Node(cluster, 'my-test-node')
+
+        const waitForEnd = jest.fn().mockReturnValue(Promise.resolve({}))
+        const getTransaction = jest.fn().mockReturnValue({ waitForEnd })
+        const rpc = { chain: { getTransaction } }
+        node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
+
+        const runDetached = jest
+          .spyOn(backend, 'runDetached')
+          .mockReturnValue(Promise.resolve())
+
+        await node.mineUntil({ transactionMined: 'abcdef' })
+
+        expect(runDetached).not.toHaveBeenCalled()
+        expect(getTransaction).toHaveBeenCalledTimes(1)
+        expect(getTransaction).toHaveBeenCalledWith({ transactionHash: 'abcdef' })
       })
     })
   })

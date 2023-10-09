@@ -116,13 +116,36 @@ export class Node {
     throw new Error(`Timeout of ${timeout}ms exceeded`)
   }
 
-  async mineUntil(until: { blockSequence: number }): Promise<void> {
+  async mineUntil(
+    until: { blockSequence: number } | { transactionMined: string },
+  ): Promise<void> {
     const rpc = await this.connectRpc()
 
-    const isDone = async (): Promise<boolean> => {
-      const status = await rpc.node.getStatus()
-      return status.content.blockchain.head.sequence >= until.blockSequence
-    }
+    const isDone = ((): (() => Promise<boolean>) => {
+      if ('blockSequence' in until) {
+        return async (): Promise<boolean> => {
+          const status = await rpc.node.getStatus()
+          return status.content.blockchain.head.sequence >= until.blockSequence
+        }
+      }
+      if ('transactionMined' in until) {
+        return async (): Promise<boolean> => {
+          try {
+            await rpc.chain
+              .getTransaction({ transactionHash: until.transactionMined })
+              .waitForEnd()
+          } catch (err) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            if (!!err && typeof err === 'object' && err.status === 404) {
+              return false
+            }
+            throw err
+          }
+          return true
+        }
+      }
+      throw 'unreachable statement'
+    })()
 
     if (await isDone()) {
       return
