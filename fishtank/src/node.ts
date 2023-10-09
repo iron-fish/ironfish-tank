@@ -6,7 +6,7 @@ import { randomBytes } from 'crypto'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { Docker } from './backend'
-import { Cluster, CLUSTER_LABEL } from './cluster'
+import { Cluster, CLUSTER_LABEL, CONTAINER_DATADIR } from './cluster'
 import * as naming from './naming'
 
 const DEFAULT_WAIT_TIMEOUT = 5 * 1000 // 5 seconds
@@ -37,6 +37,10 @@ export class Node {
 
   private get containerName(): string {
     return naming.containerName(this.cluster, this.name)
+  }
+
+  private get networkName(): string {
+    return naming.networkName(this.cluster)
   }
 
   get dataDir(): string {
@@ -114,33 +118,89 @@ export class Node {
 
   async mineUntil(until: { blockSequence: number }): Promise<void> {
     const rpc = await this.connectRpc()
+
     const isDone = async (): Promise<boolean> => {
-      return (
-        (await rpc.node.getStatus()).content.blockchain.head.sequence >= until.blockSequence
-      )
+      const status = await rpc.node.getStatus()
+      return status.content.blockchain.head.sequence >= until.blockSequence
     }
 
     if (await isDone()) {
       return
     }
 
-    const minerContainerName = `${this.containerName}-miner-${randomSuffix()}`
-    const minerContainerImage = await this.getImage()
-    await this.backend.runDetached(minerContainerImage, {
-      args: ['miners:start', '--rpc.tcp', '--rpc.tcp.host', this.name, '--no-rpc.tcp.tls'],
-      name: minerContainerName,
-      networks: [naming.networkName(this.cluster)],
-      labels: { [CLUSTER_LABEL]: this.cluster.name },
+    const poolProcess = await this.spawnCompanionProcess({
+      baseName: 'pool',
+      args: [
+        'miners:pools:start',
+        '--rpc.tcp',
+        '--rpc.tcp.host',
+        this.name,
+        '--no-rpc.tcp.tls',
+      ],
+    })
+
+    const minerProcess = await this.spawnCompanionProcess({
+      baseName: 'miner',
+      args: [
+        'miners:start',
+        '--rpc.tcp',
+        '--rpc.tcp.host',
+        this.name,
+        '--no-rpc.tcp.tls',
+        '--pool',
+        poolProcess.name,
+      ],
     })
 
     while (!(await isDone())) {
       await sleep(MINE_POLL_INTERVAL)
     }
 
-    await this.backend.remove([minerContainerName], { force: true, volumes: true })
+    await minerProcess.remove()
+    await poolProcess.remove()
+  }
+
+  private async spawnCompanionProcess(options: {
+    baseName: string
+    args: readonly string[]
+  }): Promise<CompanionProcess> {
+    const suffix = `${options.baseName}-${randomSuffix()}`
+    const name = `${this.name}-${suffix}`
+    const containerName = `${this.containerName}-${suffix}`
+    const image = await this.getImage()
+    const volumes = new Map<string, string>()
+    volumes.set(this.dataDir, CONTAINER_DATADIR)
+
+    await this.backend.runDetached(image, {
+      args: options.args,
+      name: containerName,
+      hostname: name,
+      networks: [this.networkName],
+      volumes,
+      labels: { [CLUSTER_LABEL]: this.cluster.name },
+    })
+
+    return new CompanionProcess(name, containerName, this.backend)
   }
 
   remove(): Promise<void> {
     return this.backend.remove([this.containerName], { force: true, volumes: true })
+  }
+}
+
+class CompanionProcess {
+  readonly name: string
+  readonly containerName: string
+
+  private readonly backend: Docker
+
+  constructor(name: string, containerName: string, backend: Docker) {
+    this.name = name
+    this.containerName = containerName
+    this.backend = backend
+  }
+
+  remove(): Promise<void> {
+    return this.backend.remove([this.containerName], { force: true })
   }
 }
