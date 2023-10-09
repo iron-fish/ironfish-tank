@@ -249,6 +249,53 @@ describe('Node', () => {
         expect(getTransaction).toHaveBeenCalledWith({ transactionHash: 'abcdef' })
       })
     })
+
+    describe('with accountBalance', () => {
+      it('mines until the condition is satisfied', async () => {
+        const backend = new Docker()
+        const cluster = new Cluster({ name: 'my-test-cluster', backend })
+        const node = new Node(cluster, 'my-test-node')
+
+        const getAccountBalance = jest
+          .fn()
+          .mockReturnValueOnce(Promise.resolve({ content: { available: '100' } }))
+          .mockReturnValueOnce(Promise.resolve({ content: { available: '500' } }))
+        const rpc = { wallet: { getAccountBalance } }
+        node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
+        node.getImage = jest.fn().mockReturnValue(Promise.resolve('some-image'))
+
+        const runDetached = jest
+          .spyOn(backend, 'runDetached')
+          .mockReturnValue(Promise.resolve())
+        const remove = jest.spyOn(backend, 'remove').mockReturnValue(Promise.resolve())
+
+        await node.mineUntil({ accountBalance: 200n })
+
+        checkMiningProcess(runDetached, remove)
+        expect(getAccountBalance).toHaveBeenCalledTimes(2)
+      })
+
+      it('does not run a miner if the condition is already satisfied', async () => {
+        const backend = new Docker()
+        const cluster = new Cluster({ name: 'my-test-cluster', backend })
+        const node = new Node(cluster, 'my-test-node')
+
+        const getAccountBalance = jest
+          .fn()
+          .mockReturnValue(Promise.resolve({ content: { available: '500' } }))
+        const rpc = { wallet: { getAccountBalance } }
+        node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
+
+        const runDetached = jest
+          .spyOn(backend, 'runDetached')
+          .mockReturnValue(Promise.resolve())
+
+        await node.mineUntil({ accountBalance: 200n })
+
+        expect(runDetached).not.toHaveBeenCalled()
+        expect(getAccountBalance).toHaveBeenCalledTimes(1)
+      })
+    })
   })
 
   describe('remove', () => {

@@ -117,7 +117,10 @@ export class Node {
   }
 
   async mineUntil(
-    until: { blockSequence: number } | { transactionMined: string },
+    until:
+      | { blockSequence: number }
+      | { transactionMined: string }
+      | { accountBalance: bigint },
   ): Promise<void> {
     const rpc = await this.connectRpc()
 
@@ -142,6 +145,12 @@ export class Node {
             throw err
           }
           return true
+        }
+      }
+      if ('accountBalance' in until) {
+        return async (): Promise<boolean> => {
+          const balance = await rpc.wallet.getAccountBalance()
+          return BigInt(balance.content.available) >= until.accountBalance
         }
       }
       throw 'unreachable statement'
