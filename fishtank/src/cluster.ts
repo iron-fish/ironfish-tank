@@ -59,6 +59,7 @@ export class Cluster {
       extraLabels: {
         [NODE_ROLE_LABEL]: BOOTSTRAP_NODE_ROLE,
       },
+      waitForStart: options?.waitForStart,
     })
 
     if (typeof options?.initChain === 'undefined' || options?.initChain === true) {
