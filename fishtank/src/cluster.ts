@@ -122,6 +122,7 @@ export class Cluster {
     config.enableRpcTls ??= false
     config.rpcTcpHost ??= ''
     config.poolDifficulty ??= '1500000'
+    config.preemptiveBlockMining ??= false
 
     await promises.writeFile(resolve(node.dataDir, 'config.json'), JSON.stringify(config))
 
