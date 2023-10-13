@@ -159,8 +159,19 @@ export class Cluster {
     // Remove networks
     await this.backend.removeNetworks([naming.networkName(this)], { force: true })
 
-    // Remove cluster folder
-    const dest = join(tmpdir(), 'fishtank', this.name)
-    await promises.rm(dest, { force: true, recursive: true })
+    // Remove the contents of the cluster folder. Do it through a container
+    // because the current user may not have the right permissions to remove
+    // files created by other containers (because containers run with UID 0 in
+    // their UID namespace, and so they create files and directories owned by
+    // root, but this process may or may not be running as root).
+    const workdir = join(tmpdir(), 'fishtank')
+    await promises.mkdir(workdir, { recursive: true })
+    await this.backend.run('alpine:latest', {
+      entrypoint: '/bin/rm',
+      args: ['-rf', `/cluster/${this.name}`],
+      name: naming.containerName(this, 'cleanup'),
+      labels: { [CLUSTER_LABEL]: this.name },
+      volumes: new Map<string, string>([[workdir, '/cluster']]),
+    })
   }
 }

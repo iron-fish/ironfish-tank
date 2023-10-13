@@ -17,6 +17,7 @@ type ExecFilePromiseError = {
 }
 
 export type RunOptions = {
+  entrypoint?: string
   args?: readonly string[]
   name?: string
   networks?: readonly string[]
@@ -97,8 +98,18 @@ export class Docker {
     }
   }
 
+  run(image: string, options?: RunOptions): Promise<{ stdout: string; stderr: string }> {
+    const runArgs = this.runArgs(image, '--rm', options)
+    return this.cmd(runArgs, {})
+  }
+
   async runDetached(image: string, options?: RunOptions): Promise<void> {
-    const runArgs = ['run', '--quiet', '--detach']
+    const runArgs = this.runArgs(image, '--detach', options)
+    await this.cmd(runArgs, {})
+  }
+
+  private runArgs(image: string, mode: '--rm' | '--detach', options?: RunOptions): string[] {
+    const runArgs = ['run', '--quiet', mode]
     if (options?.name) {
       runArgs.push('--name', options.name)
     }
@@ -123,11 +134,14 @@ export class Docker {
     if (options?.labels) {
       runArgs.push(...labelsToArgs(options.labels))
     }
+    if (options?.entrypoint) {
+      runArgs.push('--entrypoint', options.entrypoint)
+    }
     runArgs.push(image)
     if (options?.args) {
       runArgs.push(...options.args)
     }
-    await this.cmd(runArgs, {})
+    return runArgs
   }
 
   async inspect(identifier: string): Promise<ContainerDetails> {

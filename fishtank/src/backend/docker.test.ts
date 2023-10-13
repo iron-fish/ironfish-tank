@@ -18,6 +18,19 @@ describe('Docker Backend', () => {
     )
   })
 
+  describe('run', () => {
+    it('runs a container, and removes it after its execution is complete', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.run('hello-world:latest')
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['run', '--quiet', '--rm', 'hello-world:latest'],
+        {},
+      )
+    })
+  })
+
   describe('runDetached', () => {
     it('launches the entrypoint of the container by default', async () => {
       const docker = new Docker()
@@ -26,6 +39,17 @@ describe('Docker Backend', () => {
       await docker.runDetached('hello-world:latest')
       expect(docker['cmd']).toHaveBeenCalledWith(
         ['run', '--quiet', '--detach', 'hello-world:latest'],
+        {},
+      )
+    })
+
+    it('launches the given entrypoint', async () => {
+      const docker = new Docker()
+      docker['cmd'] = jest.fn()
+
+      await docker.runDetached('hello-world:latest', { entrypoint: 'foo' })
+      expect(docker['cmd']).toHaveBeenCalledWith(
+        ['run', '--quiet', '--detach', '--entrypoint', 'foo', 'hello-world:latest'],
         {},
       )
     })

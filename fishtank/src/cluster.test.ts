@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConfigOptions } from '@ironfish/sdk'
-import { existsSync, promises } from 'fs'
+import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { Docker } from './backend'
@@ -353,7 +353,6 @@ describe('Cluster', () => {
         networkId: 0,
       }
       await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
-      expect(existsSync(join(tmpdir(), 'fishtank', cluster.name))).toEqual(true)
 
       const list = jest.spyOn(backend, 'list').mockReturnValue(
         Promise.resolve([
@@ -366,6 +365,11 @@ describe('Cluster', () => {
       const removeNetworks = jest
         .spyOn(backend, 'removeNetworks')
         .mockReturnValue(Promise.resolve())
+      const run = jest
+        .spyOn(backend, 'run')
+        .mockReturnValue(Promise.resolve({ stdout: '', stderr: '' }))
+
+      const workdir = join(tmpdir(), 'fishtank')
 
       await cluster.teardown()
 
@@ -377,8 +381,13 @@ describe('Cluster', () => {
         { force: true, volumes: true },
       )
       expect(removeNetworks).toHaveBeenCalledWith(['my-test-cluster'], { force: true })
-
-      expect(existsSync(join(tmpdir(), 'fishtank', cluster.name))).toEqual(false)
+      expect(run).toHaveBeenCalledWith('alpine:latest', {
+        entrypoint: '/bin/rm',
+        args: ['-rf', `/cluster/my-test-cluster`],
+        name: 'my-test-cluster_cleanup',
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+        volumes: new Map<string, string>([[workdir, '/cluster']]),
+      })
     })
   })
 })
