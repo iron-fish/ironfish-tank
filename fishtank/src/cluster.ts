@@ -44,7 +44,7 @@ export class Cluster {
       labels: { [CLUSTER_LABEL]: this.name },
     })
 
-    if (typeof options?.bootstrap === 'undefined' || options?.bootstrap === true) {
+    if (options?.bootstrap ?? true) {
       return this.bootstrap()
     } else if (typeof options?.bootstrap === 'object') {
       return this.bootstrap(options?.bootstrap)
@@ -62,7 +62,7 @@ export class Cluster {
       waitForStart: options?.waitForStart,
     })
 
-    if (typeof options?.initChain === 'undefined' || options?.initChain === true) {
+    if (options?.initChain ?? true) {
       await node.mineUntil({ blockSequence: 2 })
     }
   }
@@ -87,9 +87,7 @@ export class Cluster {
     waitForStart?: boolean
   }): Promise<Node> {
     const config = options.config || {}
-    if (typeof config.bootstrapNodes === 'undefined') {
-      config.bootstrapNodes = (await this.getBootstrapNodes()).map((node) => node.name)
-    }
+    config.bootstrapNodes ??= (await this.getBootstrapNodes()).map((node) => node.name)
     return this.internalSpawn({ ...options, config })
   }
 
