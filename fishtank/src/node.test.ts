@@ -118,14 +118,16 @@ describe('Node', () => {
         const runDetached = jest
           .spyOn(backend, 'runDetached')
           .mockReturnValue(Promise.resolve())
+        const remove = jest.spyOn(backend, 'remove').mockReturnValue(Promise.resolve())
 
         await node.mineUntil({ blockSequence: 123 })
 
         expect(runDetached).toHaveBeenCalledWith(
           'some-image',
           expect.objectContaining({
+            name: expect.stringMatching(/^my-test-cluster_my-test-node-pool-/),
             args: [
-              'miners:start',
+              'miners:pools:start',
               '--rpc.tcp',
               '--rpc.tcp.host',
               'my-test-node',
@@ -135,7 +137,37 @@ describe('Node', () => {
               ['fishtank.cluster']: 'my-test-cluster',
             },
             networks: ['my-test-cluster'],
+            hostname: expect.stringMatching(/^my-test-node-pool-/),
           }),
+        )
+
+        expect(runDetached).toHaveBeenCalledWith(
+          'some-image',
+          expect.objectContaining({
+            name: expect.stringMatching(/^my-test-cluster_my-test-node-miner-/),
+            args: [
+              'miners:start',
+              '--rpc.tcp',
+              '--rpc.tcp.host',
+              'my-test-node',
+              '--no-rpc.tcp.tls',
+              '--pool',
+              expect.stringMatching(/^my-test-node-pool-/),
+            ],
+            labels: {
+              ['fishtank.cluster']: 'my-test-cluster',
+            },
+            networks: ['my-test-cluster'],
+          }),
+        )
+
+        expect(remove).toHaveBeenCalledWith(
+          [expect.stringMatching(/^my-test-cluster_my-test-node-pool-/)],
+          { force: true },
+        )
+        expect(remove).toHaveBeenCalledWith(
+          [expect.stringMatching(/^my-test-cluster_my-test-node-miner-/)],
+          { force: true },
         )
       })
 

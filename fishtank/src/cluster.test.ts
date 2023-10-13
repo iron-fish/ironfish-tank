@@ -217,6 +217,7 @@ describe('Cluster', () => {
         enableRpcTcp: true,
         enableRpcTls: false,
         rpcTcpHost: '',
+        poolDifficulty: '1500000',
         bootstrapNodes: ['my-bootstrap-node'],
       })
       expect(node.name).toEqual('my-test-container')

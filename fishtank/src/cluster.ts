@@ -123,6 +123,7 @@ export class Cluster {
     config.enableRpcTcp ??= true
     config.enableRpcTls ??= false
     config.rpcTcpHost ??= ''
+    config.poolDifficulty ??= '1500000'
 
     await promises.writeFile(resolve(node.dataDir, 'config.json'), JSON.stringify(config))
 
