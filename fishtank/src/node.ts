@@ -9,7 +9,7 @@ import { Docker } from './backend'
 import { Cluster, CLUSTER_LABEL, CONTAINER_DATADIR } from './cluster'
 import * as naming from './naming'
 
-export const DEFAULT_WAIT_TIMEOUT = 5 * 1000 // 5 seconds
+export const DEFAULT_WAIT_TIMEOUT = 30 * 1000 // 30 seconds
 const WAIT_POLL_INTERVAL = 200 // 0.2 seconds
 const SCAN_POLL_INTERVAL = 200 // 0.2 seconds
 const SYNC_POLL_INTERVAL = 200 // 0.2 seconds
