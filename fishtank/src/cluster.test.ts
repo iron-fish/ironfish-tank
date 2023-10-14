@@ -217,7 +217,6 @@ describe('Cluster', () => {
         enableRpcTcp: true,
         enableRpcTls: false,
         rpcTcpHost: '',
-        poolDifficulty: '1500000',
         preemptiveBlockMining: false,
         bootstrapNodes: ['my-bootstrap-node'],
       })

@@ -205,28 +205,9 @@ export class Node {
       return
     }
 
-    const poolProcess = await this.spawnCompanionProcess({
-      baseName: 'pool',
-      args: [
-        'miners:pools:start',
-        '--rpc.tcp',
-        '--rpc.tcp.host',
-        this.name,
-        '--no-rpc.tcp.tls',
-      ],
-    })
-
     const minerProcess = await this.spawnCompanionProcess({
       baseName: 'miner',
-      args: [
-        'miners:start',
-        '--rpc.tcp',
-        '--rpc.tcp.host',
-        this.name,
-        '--no-rpc.tcp.tls',
-        '--pool',
-        poolProcess.name,
-      ],
+      args: ['miners:start', '--rpc.tcp', '--rpc.tcp.host', this.name, '--no-rpc.tcp.tls'],
     })
 
     while (!(await isDone())) {
@@ -234,7 +215,6 @@ export class Node {
     }
 
     await minerProcess.remove()
-    await poolProcess.remove()
   }
 
   private async spawnCompanionProcess(options: {
