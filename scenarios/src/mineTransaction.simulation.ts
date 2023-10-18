@@ -33,7 +33,6 @@ describe('transactions', () => {
           },
         ],
         fee: CurrencyUtils.encode(500n),
-        expiration: 100,
       })
 
       const postTxResponse = await node1Rpc.wallet.postTransaction({
