@@ -21,6 +21,7 @@ export type BootstrapOptions = {
   nodeImage?: string
   waitForStart?: boolean
   initChain?: boolean
+  networkDefinition?: Partial<NetworkDefinition>
 }
 
 export class Cluster {
@@ -40,10 +41,10 @@ export class Cluster {
       labels: { [CLUSTER_LABEL]: this.name },
     })
 
-    if (options?.bootstrap ?? true) {
-      return this.bootstrap()
-    } else if (typeof options?.bootstrap === 'object') {
+    if (typeof options?.bootstrap === 'object') {
       return this.bootstrap(options?.bootstrap)
+    } else if (options?.bootstrap ?? true) {
+      return this.bootstrap()
     }
   }
 
@@ -56,6 +57,7 @@ export class Cluster {
         [NODE_ROLE_LABEL]: BOOTSTRAP_NODE_ROLE,
       },
       waitForStart: options?.waitForStart,
+      networkDefinition: options?.networkDefinition,
     })
 
     if (options?.initChain ?? true) {
