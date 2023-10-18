@@ -4,7 +4,7 @@
 import { Asset } from '@ironfish/rust-nodejs'
 import { CurrencyUtils } from '@ironfish/sdk'
 import { Cluster } from 'fishtank'
-import { waitForScanning, waitForSync, withTestCluster } from '.'
+import { withTestCluster } from '.'
 
 describe('transactions', () => {
   it('can be mined', async () => {
@@ -44,8 +44,7 @@ describe('transactions', () => {
       expect(postTxResponse.content.broadcasted).toBe(true)
 
       await node1.mineUntil({ transactionMined: postTxResponse.content.hash })
-      await waitForSync(node1Rpc, node2Rpc)
-      await waitForScanning(node2Rpc)
+      await cluster.waitForConvergence()
 
       const node2BalanceAfterTx = await node2Rpc.wallet.getAccountBalance()
       expect(BigInt(node2BalanceAfterTx.content.unconfirmed)).toBe(100_000_000n)

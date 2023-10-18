@@ -7,7 +7,7 @@ import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { Docker, Labels } from './backend'
 import * as naming from './naming'
-import { INTERNAL_RPC_TCP_PORT, Node } from './node'
+import { DEFAULT_WAIT_TIMEOUT, INTERNAL_RPC_TCP_PORT, Node } from './node'
 
 export const DEFAULT_IMAGE = 'ironfish:latest'
 export const DEFAULT_BOOTSTRAP_NODE_NAME = 'bootstrap'
@@ -147,6 +147,29 @@ export class Cluster {
     }
 
     return node
+  }
+
+  async getNodes(): Promise<Node[]> {
+    return (
+      await this.backend.list({
+        labels: {
+          [CLUSTER_LABEL]: this.name,
+        },
+      })
+    ).map((container) => new Node(this, container.name.slice(this.name.length + 1)))
+  }
+
+  async waitForConvergence(options?: {
+    timeout?: number
+    nodes?: readonly Node[]
+  }): Promise<void> {
+    const nodes = options?.nodes ?? (await this.getNodes())
+    const timeout = options?.timeout ?? DEFAULT_WAIT_TIMEOUT
+
+    const start = performance.now()
+    await Node.waitForSync(nodes, { timeout })
+    const leftover = timeout - (performance.now() - start)
+    await Promise.all(nodes.map((node) => node.waitForScan({ timeout: leftover })))
   }
 
   async teardown(): Promise<void> {

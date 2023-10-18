@@ -9,14 +9,37 @@ import { Docker } from './backend'
 import { Cluster, CLUSTER_LABEL, CONTAINER_DATADIR } from './cluster'
 import * as naming from './naming'
 
-const DEFAULT_WAIT_TIMEOUT = 5 * 1000 // 5 seconds
+export const DEFAULT_WAIT_TIMEOUT = 5 * 1000 // 5 seconds
 const WAIT_POLL_INTERVAL = 200 // 0.2 seconds
+const SCAN_POLL_INTERVAL = 200 // 0.2 seconds
+const SYNC_POLL_INTERVAL = 200 // 0.2 seconds
 const MINE_POLL_INTERVAL = 200 // 0.2 seconds
 
 export const INTERNAL_RPC_TCP_PORT = 8020
 
-export const sleep = (time: number): Promise<void> => {
+const sleep = (time: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, time))
+}
+
+const loopWithTimeout = async (
+  options: { timeout: number; interval: number },
+  callback: () => Promise<boolean>,
+): Promise<void> => {
+  let stop = false
+  const timer = setTimeout(() => {
+    stop = true
+  }, options.timeout)
+  try {
+    while (!stop) {
+      if (await callback()) {
+        return
+      }
+      await sleep(options.interval)
+    }
+  } finally {
+    clearTimeout(timer)
+  }
+  throw new Error(`Timeout of ${options.timeout}ms exceeded`)
 }
 
 const randomSuffix = (): string => {
@@ -98,22 +121,44 @@ export class Node {
   }
 
   async waitForStart(options?: { timeout?: number }): Promise<void> {
-    let stop = false
-    const timeout = options?.timeout ?? DEFAULT_WAIT_TIMEOUT
-    const timer = setTimeout(() => {
-      stop = true
-    }, timeout)
-    try {
-      while (!stop) {
-        if (await this.isStarted()) {
-          return
+    await loopWithTimeout(
+      { timeout: options?.timeout ?? DEFAULT_WAIT_TIMEOUT, interval: WAIT_POLL_INTERVAL },
+      this.isStarted.bind(this),
+    )
+  }
+
+  async waitForScan(options?: { timeout?: number }): Promise<void> {
+    const rpc = await this.connectRpc()
+    await loopWithTimeout(
+      { timeout: options?.timeout ?? DEFAULT_WAIT_TIMEOUT, interval: SCAN_POLL_INTERVAL },
+      async (): Promise<boolean> => {
+        const status = await rpc.node.getStatus()
+        return status.content.blockchain.head.hash === status.content.accounts.head.hash
+      },
+    )
+  }
+
+  static async waitForSync(
+    nodes: readonly Node[],
+    options?: { timeout?: number },
+  ): Promise<void> {
+    const rpcs = await Promise.all(nodes.map((node) => node.connectRpc()))
+    await loopWithTimeout(
+      { timeout: options?.timeout ?? DEFAULT_WAIT_TIMEOUT, interval: SYNC_POLL_INTERVAL },
+      async (): Promise<boolean> => {
+        // Check that the status of all nodes is 'synced'
+        const statuses = await Promise.all(rpcs.map((rpc) => rpc.node.getStatus()))
+        const allSynced = statuses
+          .map((status) => status.content.blockchain.synced)
+          .reduce((acc, value) => acc && value, true)
+        if (!allSynced) {
+          return false
         }
-        await sleep(WAIT_POLL_INTERVAL)
-      }
-    } finally {
-      clearTimeout(timer)
-    }
-    throw new Error(`Timeout of ${timeout}ms exceeded`)
+        // Verify that the head of all nodes is the same
+        const heads = new Set(statuses.map((status) => status.content.blockchain.head.hash))
+        return heads.size <= 1
+      },
+    )
   }
 
   async mineUntil(
