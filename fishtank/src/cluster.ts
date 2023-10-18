@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { ConfigOptions, InternalOptions } from '@ironfish/sdk'
+import { ConfigOptions, InternalOptions, NetworkDefinition } from '@ironfish/sdk'
 import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -21,10 +21,6 @@ export type BootstrapOptions = {
   nodeImage?: string
   waitForStart?: boolean
   initChain?: boolean
-}
-
-export type NetworkDefinition = {
-  id: number
 }
 
 export class Cluster {
