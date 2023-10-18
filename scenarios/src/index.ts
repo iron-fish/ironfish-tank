@@ -1,6 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
+import { ConsensusParameters, DEVNET, NetworkDefinition, Target } from '@ironfish/sdk'
 import { Cluster } from 'fishtank'
 
 /**
@@ -46,4 +47,19 @@ export const withTestCluster = (
 ): Promise<void> => {
   const cluster = new Cluster({ name: currentTestName() })
   return withCluster(cluster, callback)
+}
+
+export const getNetworkDefinition = (
+  consensus?: Partial<ConsensusParameters>,
+): NetworkDefinition => {
+  const networkDefinition = JSON.parse(DEVNET) as NetworkDefinition
+  networkDefinition.id = 123
+  networkDefinition.genesis.header.target = Target.maxTarget().asBigInt().toString()
+  if (consensus) {
+    networkDefinition.consensus = {
+      ...networkDefinition.consensus,
+      ...consensus,
+    }
+  }
+  return networkDefinition
 }
