@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { Command, Config, Flags } from '@oclif/core'
-import { BootstrapOptions, Cluster } from 'fishtank'
+import { Cluster } from 'fishtank'
 
 export abstract class Start extends Command {
   static description = 'Spin up a new cluster'
