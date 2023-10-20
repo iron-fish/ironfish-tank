@@ -159,6 +159,11 @@ export class Cluster {
     ).map((container) => new Node(this, container.name.slice(this.name.length + 1)))
   }
 
+  async getNode(name: string): Promise<Node | undefined> {
+    const nodes = await this.getNodes()
+    return nodes.find((n) => n.name === name)
+  }
+
   async waitForConvergence(options?: {
     timeout?: number
     nodes?: readonly Node[]

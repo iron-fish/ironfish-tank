@@ -11,7 +11,7 @@ export abstract class MineUntil extends Command {
   static flags = {
     nodeName: Flags.string({
       char: 'n',
-      description: 'Bootstrap node name',
+      description: 'Node name',
       parse: (input: string) => Promise.resolve(input.trim()),
       required: true,
     }),
@@ -62,9 +62,11 @@ export abstract class MineUntil extends Command {
 
     const clusterName = args.name as string
     const cluster = new Cluster({ name: clusterName })
-    await cluster.init()
 
-    const node = await cluster.spawn({ name: flags.nodeName })
+    const node = await cluster.getNode(flags.nodeName)
+    if (!node) {
+      this.error(`Could not find a node with name '${flags.nodeName}'`)
+    }
     await node.mineUntil(until)
 
     this.exit(0)
