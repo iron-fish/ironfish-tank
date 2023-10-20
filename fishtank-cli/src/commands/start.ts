@@ -44,7 +44,7 @@ export abstract class Start extends Command {
     const clusterName = args.name as string
     const cluster = new Cluster({ name: clusterName })
 
-    if (flags.nodeName !== undefined && flags.nodeImage !== undefined) {
+    if (flags.bootstrap && (flags.nodeName !== undefined || flags.nodeImage !== undefined)) {
       await cluster.init({
         bootstrap: { nodeImage: flags.nodeImage, nodeName: flags.nodeName },
       })
