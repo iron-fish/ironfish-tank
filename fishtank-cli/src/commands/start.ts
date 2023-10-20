@@ -16,10 +16,22 @@ export abstract class Start extends Command {
   ]
 
   static flags = {
-    noBootstrap: Flags.boolean({
+    bootstrap: Flags.boolean({
       char: 'B',
       description:
         'Do not start any bootstrap node and do not mine any block during the creation of the cluster',
+      default: true,
+      allowNo: true,
+    }),
+    nodeName: Flags.string({
+      char: 'n',
+      description: 'Bootstrap node name',
+      parse: (input: string) => Promise.resolve(input.trim()),
+    }),
+    nodeImage: Flags.string({
+      char: 'i',
+      description: 'Bootstrap node image',
+      parse: (input: string) => Promise.resolve(input.trim()),
     }),
   }
 
@@ -31,7 +43,15 @@ export abstract class Start extends Command {
     const { args, flags } = await this.parse(Start)
     const clusterName = args.name as string
     const cluster = new Cluster({ name: clusterName })
-    await cluster.init({ bootstrap: !flags.noBootstrap })
+
+    if (flags.bootstrap && (flags.nodeName !== undefined || flags.nodeImage !== undefined)) {
+      await cluster.init({
+        bootstrap: { nodeImage: flags.nodeImage, nodeName: flags.nodeName },
+      })
+    } else {
+      await cluster.init({ bootstrap: flags.bootstrap })
+    }
+
     this.exit(0)
   }
 }
