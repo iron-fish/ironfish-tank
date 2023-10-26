@@ -257,7 +257,7 @@ describe('Docker Backend', () => {
       const docker = new Docker()
       docker['cmd'] = jest.fn().mockReturnValue({
         stdout:
-          '{"Command":"...","CreatedAt":"2023-08-10 12:02:39 -0700 PDT","ID":"b0a1425e5e9f56746826fa9e037e5cc4eb2e472a0cd5a0bbedfffd55de0415b5","Image":"ironfish:latest","LocalVolumes":"1","Mounts":"b7ae1c8b5a1a3cc3428ee5a39c358f12bc0ec263a6a8feff3fbb0a4d91fee84d","Names":"test-cluster_test-node","Networks":"test_cluster","Ports":"","RunningFor":"4 weeks ago","Size":"0B","State":"exited","Status":"Exited (0) 4 weeks ago"}\n' +
+          '{"Command":"...","CreatedAt":"2023-08-10 12:02:39 -0700 PDT","ID":"b0a1425e5e9f56746826fa9e037e5cc4eb2e472a0cd5a0bbedfffd55de0415b5","Image":"ghcr.io/iron-fish/ironfish:latest","LocalVolumes":"1","Mounts":"b7ae1c8b5a1a3cc3428ee5a39c358f12bc0ec263a6a8feff3fbb0a4d91fee84d","Names":"test-cluster_test-node","Networks":"test_cluster","Ports":"","RunningFor":"4 weeks ago","Size":"0B","State":"exited","Status":"Exited (0) 4 weeks ago"}\n' +
           '{"Command":"...","CreatedAt":"2023-08-10 12:02:39 -0700 PDT","ID":"02dbd848851d3e276980a5a014f5371b0e32b46e4b3a09c5b3219daccb5dd552","Image":"ironfish:1.3.2","LocalVolumes":"1","Mounts":"800c9adead7f30ef6748bcb641951a699aa586eca280b7f7da5e07fe68ac703e","Names":"test-cluster_bootstrap-node","Networks":"test_cluster","Ports":"","RunningFor":"4 weeks ago","Size":"0B","State":"exited","Status":"Exited (0) 4 weeks ago"}\n',
       })
 
