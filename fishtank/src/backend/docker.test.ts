@@ -270,7 +270,7 @@ describe('Docker Backend', () => {
         {
           id: 'b0a1425e5e9f56746826fa9e037e5cc4eb2e472a0cd5a0bbedfffd55de0415b5',
           name: 'test-cluster_test-node',
-          image: 'ironfish:latest',
+          image: 'ghcr.io/iron-fish/ironfish:latest',
         },
         {
           id: '02dbd848851d3e276980a5a014f5371b0e32b46e4b3a09c5b3219daccb5dd552',
