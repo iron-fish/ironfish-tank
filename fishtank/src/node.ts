@@ -21,17 +21,22 @@ const sleep = (time: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, time))
 }
 
+type IsReady = { ready: boolean; reason: string }
+
 const loopWithTimeout = async (
   options: { timeout: number; interval: number },
-  callback: () => Promise<boolean>,
+  callback: () => Promise<IsReady>,
 ): Promise<void> => {
   let stop = false
   const timer = setTimeout(() => {
     stop = true
   }, options.timeout)
+  let status: IsReady = { ready: false, reason: '' }
+
   try {
     while (!stop) {
-      if (await callback()) {
+      status = await callback()
+      if (status.ready) {
         return
       }
       await sleep(options.interval)
@@ -39,7 +44,8 @@ const loopWithTimeout = async (
   } finally {
     clearTimeout(timer)
   }
-  throw new Error(`Timeout of ${options.timeout}ms exceeded`)
+
+  throw new Error(`Timeout of ${options.timeout}ms exceeded\nStatus: ${status.reason}`)
 }
 
 const randomSuffix = (): string => {
@@ -123,7 +129,10 @@ export class Node {
   async waitForStart(options?: { timeout?: number }): Promise<void> {
     await loopWithTimeout(
       { timeout: options?.timeout ?? DEFAULT_WAIT_TIMEOUT, interval: WAIT_POLL_INTERVAL },
-      this.isStarted.bind(this),
+      async (): Promise<IsReady> => {
+        const started = await this.isStarted()
+        return { ready: started, reason: started ? 'started' : 'not started' }
+      },
     )
   }
 
@@ -131,9 +140,14 @@ export class Node {
     const rpc = await this.connectRpc()
     await loopWithTimeout(
       { timeout: options?.timeout ?? DEFAULT_WAIT_TIMEOUT, interval: SCAN_POLL_INTERVAL },
-      async (): Promise<boolean> => {
+      async (): Promise<IsReady> => {
         const status = await rpc.node.getStatus()
-        return status.content.blockchain.head.hash === status.content.accounts.head.hash
+        const chainHead = status.content.blockchain.head.hash
+        const accountsHead = status.content.accounts.head.hash
+        return {
+          ready: chainHead === accountsHead,
+          reason: `chain on ${chainHead}; accounts on ${accountsHead}`,
+        }
       },
     )
   }
@@ -145,18 +159,18 @@ export class Node {
     const rpcs = await Promise.all(nodes.map((node) => node.connectRpc()))
     await loopWithTimeout(
       { timeout: options?.timeout ?? DEFAULT_WAIT_TIMEOUT, interval: SYNC_POLL_INTERVAL },
-      async (): Promise<boolean> => {
+      async (): Promise<IsReady> => {
         // Check that the status of all nodes is 'synced'
         const statuses = await Promise.all(rpcs.map((rpc) => rpc.node.getStatus()))
         const allSynced = statuses
           .map((status) => status.content.blockchain.synced)
           .reduce((acc, value) => acc && value, true)
         if (!allSynced) {
-          return false
+          return { ready: false, reason: 'some nodes are not synced' }
         }
         // Verify that the head of all nodes is the same
         const heads = new Set(statuses.map((status) => status.content.blockchain.head.hash))
-        return heads.size <= 1
+        return { ready: heads.size <= 1, reason: `chain heads: ${JSON.stringify([...heads])}` }
       },
     )
   }
