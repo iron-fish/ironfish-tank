@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { Asset } from '@ironfish/rust-nodejs'
-import { CurrencyUtils, RpcBlockHeader } from '@ironfish/sdk'
+import { CurrencyUtils, RpcBlockHeader, Transaction } from '@ironfish/sdk'
 import { Cluster, Node } from 'fishtank'
 import { getNetworkDefinition, withTestCluster } from '.'
 
@@ -68,11 +68,45 @@ const getMainChain = async (node: Node): Promise<RpcBlockHeader[]> => {
       const block = value.block
       if (block.main) {
         blocks.push(block)
+        expect(block.sequence).toBe(blocks.length)
       }
     }
   }
 
   return blocks
+}
+
+const getTransactionsVersions = async (
+  node: Node,
+  blocks: RpcBlockHeader[],
+): Promise<Set<number>> => {
+  const rpc = await node.connectRpc()
+  const transactionVersions = new Set<number>()
+  for (const block of blocks) {
+    const getBlockResponse = await rpc.chain.getBlock({ hash: block.hash, serialized: true })
+    for (const blockTx of getBlockResponse.content.block.transactions) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const serializedTx = blockTx.serialized!
+      const tx = new Transaction(Buffer.from(serializedTx, 'hex'))
+      transactionVersions.add(tx.version())
+    }
+  }
+  return transactionVersions
+}
+
+const expectTransactionsVersion = async (
+  node: Node,
+  blockRange: { from: number; to: number | null },
+  expectedVersion: number,
+): Promise<void> => {
+  const blocks = (await getMainChain(node)).slice(
+    // Array indexes start from 0, but block indexes start from 1, so adjust
+    // accordingly
+    blockRange.from - 1,
+    blockRange.to ? blockRange.to : undefined,
+  )
+  const versions = await getTransactionsVersions(node, blocks)
+  expect([...versions]).toEqual([expectedVersion])
 }
 
 /**
@@ -159,6 +193,27 @@ describe('hard fork 1', () => {
 
       // Check that the chain split at `hardForkHeight`
       await expectChainFork(nodes[0], rogueNodes[0], hardForkHeight)
+
+      // Send some more transactions to/from random nodes
+      await Promise.all(
+        [...Array(numTransactions).keys()].map(() => sendRandomTransaction(allNodes)),
+      )
+
+      // Mine a few more blocks to make sure the transactions are mined
+      await Promise.all(
+        allNodes.map((node) => node.mineUntil({ blockSequence: hardForkHeight + 10 })),
+      )
+      await cluster.waitForConvergence({ nodes })
+      await cluster.waitForConvergence({ nodes: rogueNodes })
+
+      // Verify that:
+      // 1. before the hard fork, all blocks are using V1 transactions
+      // 2. after the hard fork, blocks from the `nodes` are are using V2
+      //    transactions, blocks from the `rogueNodes` are using V1
+      //    transactions
+      await expectTransactionsVersion(nodes[0], { from: 1, to: hardForkHeight - 1 }, 1)
+      await expectTransactionsVersion(nodes[0], { from: hardForkHeight, to: null }, 2)
+      await expectTransactionsVersion(rogueNodes[0], { from: 1, to: null }, 1)
     })
   })
 })
