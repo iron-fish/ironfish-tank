@@ -28,21 +28,6 @@ for general use yet!**
     setfacl -m u:$USER:rw /var/run/docker.sock
     ```
 
-1.  **(Optional) Pull the Iron Fish Docker image:** By default, the Iron Fish
-    Tank expects to use a Docker image named `ironfish:latest`, however this
-    image is not available in fresh installations of Docker, and needs to be
-    either manually downloaded, or manually built. To download it from the
-    official Iron Fish Docker Registry, and give it the name `ironfish:latest`,
-    run the following:
-
-    ```sh
-    docker pull ghcr.io/iron-fish/ironfish:latest
-    docker tag ghcr.io/iron-fish/ironfish:latest ironfish:latest
-    ```
-
-    In the future, the Iron Fish Tank will be improved to make this step
-    unnecessary.
-
 1.  **Check out and build the Iron Fish Tank repository:**
 
     ```sh

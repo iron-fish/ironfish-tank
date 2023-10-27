@@ -9,7 +9,7 @@ import { Docker, Labels } from './backend'
 import * as naming from './naming'
 import { DEFAULT_WAIT_TIMEOUT, INTERNAL_RPC_TCP_PORT, Node } from './node'
 
-export const DEFAULT_IMAGE = 'ironfish:latest'
+export const DEFAULT_IMAGE = 'ghcr.io/iron-fish/ironfish:latest'
 export const DEFAULT_BOOTSTRAP_NODE_NAME = 'bootstrap'
 export const CLUSTER_LABEL = 'fishtank.cluster'
 export const NODE_ROLE_LABEL = 'fishtank.node.role'

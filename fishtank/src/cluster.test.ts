@@ -65,7 +65,7 @@ describe('Cluster', () => {
         attachable: true,
         labels: { 'fishtank.cluster': 'my-test-cluster' },
       })
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+      expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
         args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
@@ -109,7 +109,7 @@ describe('Cluster', () => {
 
       await cluster.bootstrap()
 
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+      expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
         args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
@@ -133,7 +133,7 @@ describe('Cluster', () => {
 
       await cluster.bootstrap({ initChain: false })
 
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+      expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
         args: ['start'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
@@ -153,7 +153,7 @@ describe('Cluster', () => {
 
       await cluster.bootstrap({ nodeName: 'my-bootstrap-node', initChain: false })
 
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+      expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
         args: ['start'],
         name: 'my-test-cluster_my-bootstrap-node',
         networks: ['my-test-cluster'],
@@ -224,7 +224,7 @@ describe('Cluster', () => {
       expect(list).toHaveBeenCalledWith({
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
       })
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+      expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
         args: ['start'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
@@ -253,7 +253,7 @@ describe('Cluster', () => {
           .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
           .then(JSON.parse),
       ).toEqual(config)
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+      expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
         args: ['start'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
@@ -282,7 +282,7 @@ describe('Cluster', () => {
           .readFile(resolve(dataDir, 'internal.json'), { encoding: 'utf8' })
           .then(JSON.parse),
       ).toEqual(internal)
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+      expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
         args: ['start'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
@@ -311,7 +311,7 @@ describe('Cluster', () => {
           .readFile(resolve(dataDir, 'customNetwork.json'), { encoding: 'utf8' })
           .then(JSON.parse),
       ).toEqual(networkDefinition)
-      expect(runDetached).toHaveBeenCalledWith('ironfish:latest', {
+      expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
         args: ['start', '--customNetwork', '/root/.ironfish/customNetwork.json'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
