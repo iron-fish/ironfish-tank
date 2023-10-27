@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { IronfishSdk, RpcSocketClient } from '@ironfish/sdk'
+import { createRootLogger, IronfishSdk, Logger, RpcSocketClient } from '@ironfish/sdk'
 import { randomBytes } from 'crypto'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -50,6 +50,12 @@ const loopWithTimeout = async (
 
 const randomSuffix = (): string => {
   return randomBytes(2).toString('hex')
+}
+
+const dummyLogger = (): Logger => {
+  const logger = createRootLogger()
+  logger.level = -999
+  return logger
 }
 
 export class Node {
@@ -101,6 +107,7 @@ export class Node {
         enableRpcTls: false,
         rpcTcpPort,
       },
+      logger: dummyLogger(),
     })
     return sdk.connectRpc(false, true) as Promise<RpcSocketClient>
   }
