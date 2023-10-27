@@ -22,5 +22,8 @@ jobs:
       - name: Install packages
         run: yarn --non-interactive --frozen-lockfile
 
+      - name: Build packages
+        run: yarn build
+
       - name: Run scenarios
         run: yarn simulate
