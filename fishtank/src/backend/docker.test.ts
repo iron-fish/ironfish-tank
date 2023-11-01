@@ -188,7 +188,7 @@ describe('Docker Backend', () => {
       const docker = new Docker()
       docker['cmd'] = jest.fn().mockReturnValue({
         stdout:
-          '[{"Id":"b19845e77e083ea8ebc191efe3d3bf52e9835fefee04e52582890ef7d8b3821e","Name":"test-cluster_test-node","Config":{"Image":"ironfish:1.3.2"},"NetworkSettings":{"Ports":{"8020/tcp":[{"HostPort":"12345"}]}}}]',
+          '[{"Id":"b19845e77e083ea8ebc191efe3d3bf52e9835fefee04e52582890ef7d8b3821e","Name":"test-cluster_test-node","Config":{"Image":"ironfish:1.3.2"},"NetworkSettings":{"Ports":{"8020/tcp":[{"HostIp":"0.0.0.0","HostPort":"12345"}]}}}]',
       })
 
       const info = await docker.inspect('test-cluster_test-node')

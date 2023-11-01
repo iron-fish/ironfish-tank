@@ -166,7 +166,9 @@ export class Docker {
       if (protocol in ports && bindings) {
         const key = protocol as 'tcp' | 'udp'
         for (const binding of bindings) {
-          ports[key].set(Number(port), Number(binding.HostPort))
+          if (binding.HostIp === '0.0.0.0') {
+            ports[key].set(Number(port), Number(binding.HostPort))
+          }
         }
       }
     }
