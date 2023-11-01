@@ -239,6 +239,10 @@ describe('hard fork 1', () => {
       const newAssetOwnerAddress = (
         await newAssetOwnerRpc.wallet.getAccountPublicKey({ account: 'default' })
       ).content.publicKey
+      console.log(await getChainHeight(nodes[0]))
+      console.log(await getChainHeight(nodes[1]))
+      console.log(await getChainHeight(nodes[2]))
+      console.log(await getChainHeight(nodes[3]))
       await expect(
         transferCustomAssetOwnership(assetId, assetCreator, newAssetOwner),
       ).rejects.toThrow('Version 1 transactions cannot contain transferOwnershipTo')

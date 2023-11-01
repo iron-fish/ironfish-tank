@@ -25,8 +25,8 @@ jobs:
       - name: Build packages
         run: yarn build
 
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
+     #- name: Setup upterm session
+     #  uses: lhotari/action-upterm@v1
 
       - name: Run scenarios
         run: yarn simulate
