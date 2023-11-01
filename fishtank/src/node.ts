@@ -197,11 +197,13 @@ export class Node {
       args: ['miners:start', '--rpc.tcp', '--rpc.tcp.host', this.name, '--no-rpc.tcp.tls'],
     })
 
-    while (!(await isDone())) {
-      await sleep(DEFAULT_POLL_INTERVAL)
+    try {
+      while (!(await isDone())) {
+        await sleep(DEFAULT_POLL_INTERVAL)
+      }
+    } finally {
+      await minerProcess.remove()
     }
-
-    await minerProcess.remove()
   }
 
   private async spawnCompanionProcess(options: {
