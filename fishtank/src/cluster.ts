@@ -9,7 +9,7 @@ import { Docker, Labels } from './backend'
 import { getConfig } from './config'
 import * as naming from './naming'
 import { INTERNAL_RPC_TCP_PORT, Node } from './node'
-import { DEFAULT_WAIT_TIMEOUT } from './waitLoop'
+import { DEFAULT_WAIT_TIMEOUT, TimeoutError } from './waitLoop'
 
 export const DEFAULT_BOOTSTRAP_NODE_NAME = 'bootstrap'
 export const CLUSTER_LABEL = 'fishtank.cluster'
@@ -168,12 +168,38 @@ export class Cluster {
   async waitForConvergence(options?: {
     timeout?: number
     nodes?: readonly Node[]
+    mineOnFailure?: boolean
   }): Promise<void> {
     const nodes = options?.nodes ?? (await this.getNodes())
     const timeout = options?.timeout ?? DEFAULT_WAIT_TIMEOUT
 
     const start = performance.now()
-    await Node.waitForSync(nodes, { timeout })
+    try {
+      await Node.waitForSync(nodes, { timeout })
+    } catch (err) {
+      const mineOnFailure = options?.mineOnFailure ?? true
+      if (mineOnFailure && err instanceof TimeoutError) {
+        // Workaround for a defect in the Iron Fish node implementation that
+        // makes the node drop new incoming blocks if it's currently syncing.
+        // When that happens, the node may be out-of-sync without realizing it,
+        // and without making any attempt to fetch the blocks it's missing. In
+        // that situation, waitForSync will timeout.
+        //
+        // If we detect this situation, we add at least one more block to the
+        // chain. While this happens, no nodes should be syncing (that's an
+        // assumption) and so they should all receive the newest block, and
+        // properly handle it. Nodes that were missing some blocks will realize
+        // that and fetch all the missing blocks.
+        //
+        // In an ideal world, this workaround shouldn't be needed; this code
+        // should be removed once the syncing logic is improved in the node.
+        //
+        // Note that this workaround does not properly respect the timeout set
+        // on `options.timeout`, but doubles it.
+        await nodes[0].mineUntil({ additionalBlocks: 1 })
+        await this.waitForConvergence({ ...options, mineOnFailure: false })
+      }
+    }
     const leftover = timeout - (performance.now() - start)
     await Promise.all(nodes.map((node) => node.waitForScan({ timeout: leftover })))
   }
