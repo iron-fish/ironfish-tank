@@ -2,7 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { Asset } from '@ironfish/rust-nodejs'
-import { CurrencyUtils, MintAssetResponse, RpcBlockHeader, Transaction } from '@ironfish/sdk'
+import {
+  CurrencyUtils,
+  MintAssetRequest,
+  MintAssetResponse,
+  RpcBlockHeader,
+  Transaction,
+} from '@ironfish/sdk'
 import { Cluster, Node } from 'fishtank'
 import { getNetworkDefinition, withTestCluster } from '.'
 
@@ -43,7 +49,10 @@ const sendRandomTransaction = async (nodes: readonly Node[]): Promise<void> => {
   })
 }
 
-const mintCustomAsset = async (node: Node): Promise<MintAssetResponse> => {
+const mintCustomAsset = async (
+  node: Node,
+  options?: Partial<MintAssetRequest>,
+): Promise<MintAssetResponse> => {
   const rpc = await node.connectRpc()
   const amount = randomAmount()
   const fee = randomAmount()
@@ -53,6 +62,7 @@ const mintCustomAsset = async (node: Node): Promise<MintAssetResponse> => {
     name: 'Some Random Asset',
     value: CurrencyUtils.encode(amount),
     fee: CurrencyUtils.encode(fee),
+    ...options,
   })
 
   return mintResponse.content
@@ -62,6 +72,7 @@ const transferCustomAssetOwnership = async (
   assetId: string,
   fromNode: Node,
   toNode: Node,
+  options?: Partial<MintAssetRequest>,
 ): Promise<MintAssetResponse> => {
   const fromRpc = await fromNode.connectRpc()
   const toRpc = await toNode.connectRpc()
@@ -76,6 +87,7 @@ const transferCustomAssetOwnership = async (
     value: CurrencyUtils.encode(amount),
     transferOwnershipTo: toAddress,
     fee: CurrencyUtils.encode(fee),
+    ...options,
   })
 
   return mintResponse.content
@@ -240,7 +252,9 @@ describe('hard fork 1', () => {
         await newAssetOwnerRpc.wallet.getAccountPublicKey({ account: 'default' })
       ).content.publicKey
       await expect(
-        transferCustomAssetOwnership(assetId, assetCreator, newAssetOwner),
+        transferCustomAssetOwnership(assetId, assetCreator, newAssetOwner, {
+          expiration: hardForkHeight - 1,
+        }),
       ).rejects.toThrow('Version 1 transactions cannot contain transferOwnershipTo')
 
       // Mine and make the hard fork happen
