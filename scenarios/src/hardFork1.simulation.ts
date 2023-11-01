@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { Asset } from '@ironfish/rust-nodejs'
-import { CurrencyUtils, RpcBlockHeader, Transaction } from '@ironfish/sdk'
+import { CurrencyUtils, MintAssetResponse, RpcBlockHeader, Transaction } from '@ironfish/sdk'
 import { Cluster, Node } from 'fishtank'
 import { getNetworkDefinition, withTestCluster } from '.'
 
@@ -41,6 +41,44 @@ const sendRandomTransaction = async (nodes: readonly Node[]): Promise<void> => {
     transaction: createTxResponse.content.transaction,
     account: 'default',
   })
+}
+
+const mintCustomAsset = async (node: Node): Promise<MintAssetResponse> => {
+  const rpc = await node.connectRpc()
+  const amount = randomAmount()
+  const fee = randomAmount()
+
+  const mintResponse = await rpc.wallet.mintAsset({
+    account: 'default',
+    name: 'Some Random Asset',
+    value: CurrencyUtils.encode(amount),
+    fee: CurrencyUtils.encode(fee),
+  })
+
+  return mintResponse.content
+}
+
+const transferCustomAssetOwnership = async (
+  assetId: string,
+  fromNode: Node,
+  toNode: Node,
+): Promise<MintAssetResponse> => {
+  const fromRpc = await fromNode.connectRpc()
+  const toRpc = await toNode.connectRpc()
+  const toAddress = (await toRpc.wallet.getAccountPublicKey({ account: 'default' })).content
+    .publicKey
+  const amount = randomAmount()
+  const fee = randomAmount()
+
+  const mintResponse = await fromRpc.wallet.mintAsset({
+    account: 'default',
+    assetId,
+    value: CurrencyUtils.encode(amount),
+    transferOwnershipTo: toAddress,
+    fee: CurrencyUtils.encode(fee),
+  })
+
+  return mintResponse.content
 }
 
 const getChainHead = async (node: Node): Promise<{ hash: string; sequence: number }> => {
@@ -144,7 +182,99 @@ const expectChainFork = async (
 }
 
 describe('hard fork 1', () => {
-  it('happens with v2 transactions', async () => {
+  it('v2 transactions are activated after enableAssetOwnership', async () => {
+    return withTestCluster(async (cluster: Cluster) => {
+      const hardForkHeight = 30
+      const networkDefinition = getNetworkDefinition({ enableAssetOwnership: hardForkHeight })
+
+      await cluster.init({ bootstrap: { networkDefinition } })
+
+      // Spin up a few nodes
+      const numNodes = 4
+      const nodes = await Promise.all(
+        [...Array(numNodes).keys()].map((i) =>
+          cluster.spawn({ name: `node-${i}`, networkDefinition }),
+        ),
+      )
+
+      // Mine some $IRON so that the nodes can send transactions
+      for (const node of nodes) {
+        await node.mineUntil({ accountBalance: 1_000_000n })
+      }
+      await cluster.waitForConvergence()
+      // Make sure the hard fork hasn't happened yet due to mining
+      expect(await getChainHeight(nodes[0])).toBeLessThan(hardForkHeight)
+
+      // Mint a new asset
+      const assetCreator = randomElem(nodes)
+      const assetCreatorRpc = await assetCreator.connectRpc()
+      const assetCreatorAddress = (
+        await assetCreatorRpc.wallet.getAccountPublicKey({ account: 'default' })
+      ).content.publicKey
+      const mintResponse = await mintCustomAsset(assetCreator)
+      const assetId = mintResponse.asset.id
+      await Promise.all(
+        nodes.map((node) =>
+          node.mineUntil({ transactionMined: mintResponse.transaction.hash }),
+        ),
+      )
+      await cluster.waitForConvergence()
+      // Make sure the hard fork hasn't happened yet due to mining
+      expect(await getChainHeight(nodes[0])).toBeLessThan(hardForkHeight)
+
+      // Ensure that the asset creator owns the asset
+      const assetDetails = (await assetCreatorRpc.wallet.getAsset({ id: assetId })).content
+      expect(assetDetails.creator).toBe(assetCreatorAddress)
+      expect(assetDetails.owner).toBe(assetCreatorAddress)
+      for (const node of nodes) {
+        const rpc = await node.connectRpc()
+        const assetDetails = (await rpc.chain.getAsset({ id: assetId })).content
+        expect(assetDetails.creator).toBe(assetCreatorAddress)
+        expect(assetDetails.owner).toBe(assetCreatorAddress)
+      }
+
+      // Ensure that creating a mint with transferOwnershipTo is not possible yet
+      const newAssetOwner = randomElem(nodes.filter((node) => node !== assetCreator))
+      const newAssetOwnerRpc = await newAssetOwner.connectRpc()
+      const newAssetOwnerAddress = (
+        await newAssetOwnerRpc.wallet.getAccountPublicKey({ account: 'default' })
+      ).content.publicKey
+      await expect(
+        transferCustomAssetOwnership(assetId, assetCreator, newAssetOwner),
+      ).rejects.toThrow('Version 1 transactions cannot contain transferOwnershipTo')
+
+      // Mine and make the hard fork happen
+      await Promise.all(nodes.map((node) => node.mineUntil({ blockSequence: hardForkHeight })))
+      await cluster.waitForConvergence({ nodes })
+      expect(await getChainHeight(nodes[0])).toBeGreaterThanOrEqual(hardForkHeight)
+
+      // Retry creating a mint with transferOwnershipTo; this time it should succeed
+      const transferOwnershipResponse = await transferCustomAssetOwnership(
+        assetId,
+        assetCreator,
+        newAssetOwner,
+      )
+      await Promise.all(
+        nodes.map((node) =>
+          node.mineUntil({ transactionMined: transferOwnershipResponse.transaction.hash }),
+        ),
+      )
+      await cluster.waitForConvergence()
+
+      // Ensure that the asset creator no longer owns the asset, and that he new owner was recorded
+      const newAssetDetails = (await assetCreatorRpc.wallet.getAsset({ id: assetId })).content
+      expect(newAssetDetails.creator).toBe(assetCreatorAddress)
+      expect(newAssetDetails.owner).toBe(newAssetOwnerAddress)
+      for (const node of nodes) {
+        const rpc = await node.connectRpc()
+        const newAssetDetails = (await rpc.chain.getAsset({ id: assetId })).content
+        expect(newAssetDetails.creator).toBe(assetCreatorAddress)
+        expect(newAssetDetails.owner).toBe(newAssetOwnerAddress)
+      }
+    })
+  })
+
+  it('chain forks when nodes have different consensus rules', async () => {
     return withTestCluster(async (cluster: Cluster) => {
       const hardForkHeight = 30
       const networkDefinition = getNetworkDefinition({ enableAssetOwnership: hardForkHeight })
