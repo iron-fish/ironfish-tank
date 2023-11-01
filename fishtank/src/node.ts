@@ -140,16 +140,27 @@ export class Node {
   async mineUntil(
     until:
       | { blockSequence: number }
+      | { additionalBlocks: number }
       | { transactionMined: string }
       | { accountBalance: bigint },
   ): Promise<void> {
     const rpc = await this.connectRpc()
 
-    const isDone = ((): (() => Promise<boolean>) => {
+    const isDone = await (async (): Promise<() => Promise<boolean>> => {
       if ('blockSequence' in until) {
         return async (): Promise<boolean> => {
-          const status = await rpc.node.getStatus()
-          return status.content.blockchain.head.sequence >= until.blockSequence
+          const status = (await rpc.node.getStatus()).content
+          return status.blockchain.head.sequence >= until.blockSequence
+        }
+      }
+      if ('additionalBlocks' in until) {
+        const initialStatus = (await rpc.node.getStatus()).content
+        return async (): Promise<boolean> => {
+          const status = (await rpc.node.getStatus()).content
+          return (
+            status.blockchain.head.sequence >=
+            initialStatus.blockchain.head.sequence + until.additionalBlocks
+          )
         }
       }
       if ('transactionMined' in until) {
@@ -170,8 +181,8 @@ export class Node {
       }
       if ('accountBalance' in until) {
         return async (): Promise<boolean> => {
-          const balance = await rpc.wallet.getAccountBalance()
-          return BigInt(balance.content.available) >= until.accountBalance
+          const balance = (await rpc.wallet.getAccountBalance()).content
+          return BigInt(balance.available) >= until.accountBalance
         }
       }
       throw 'unreachable statement'

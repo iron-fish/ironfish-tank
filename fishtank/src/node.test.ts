@@ -174,6 +174,45 @@ describe('Node', () => {
       })
     })
 
+    describe('with additionalBlocks', () => {
+      it('mines until the condition is satisfied', async () => {
+        const backend = new Docker()
+        const cluster = new Cluster({ name: 'my-test-cluster', backend })
+        const node = new Node(cluster, 'my-test-node')
+
+        const getStatus = jest
+          .fn()
+          .mockReturnValueOnce(
+            Promise.resolve({
+              content: { blockchain: { head: { sequence: 100 } } },
+            }),
+          )
+          .mockReturnValueOnce(
+            Promise.resolve({
+              content: { blockchain: { head: { sequence: 100 } } },
+            }),
+          )
+          .mockReturnValueOnce(
+            Promise.resolve({
+              content: { blockchain: { head: { sequence: 200 } } },
+            }),
+          )
+        const rpc = { node: { getStatus } }
+        node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
+        node.getImage = jest.fn().mockReturnValue(Promise.resolve('some-image'))
+
+        const runDetached = jest
+          .spyOn(backend, 'runDetached')
+          .mockReturnValue(Promise.resolve())
+        const remove = jest.spyOn(backend, 'remove').mockReturnValue(Promise.resolve())
+
+        await node.mineUntil({ additionalBlocks: 50 })
+
+        checkMiningProcess(runDetached, remove)
+        expect(getStatus).toHaveBeenCalledTimes(3)
+      })
+    })
+
     describe('with transactionMined', () => {
       it('mines until the condition is satisfied', async () => {
         const backend = new Docker()
