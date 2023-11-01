@@ -3,6 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConsensusParameters, DEVNET, NetworkDefinition, Target } from '@ironfish/sdk'
 import { Cluster } from 'fishtank'
+import { getTestConfig } from './config'
 
 /**
  * Return the name of the current Jest test that is being executed. The name is
@@ -32,7 +33,9 @@ export const withCluster = async (
   try {
     await callback(cluster)
   } finally {
-    await cluster.teardown()
+    if (getTestConfig().cleanup) {
+      await cluster.teardown()
+    }
   }
 }
 

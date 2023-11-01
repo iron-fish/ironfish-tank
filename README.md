@@ -75,3 +75,22 @@ for general use yet!**
     are part of the cluster.
 
 [Docker]: https://www.docker.com/
+
+## Configuration
+
+The following environment variables may be set to customize the behavior of simulations:
+
+*   **`FISHTANK_NODE_IMAGE`:** The Docker image to use to run Iron Fish Nodes.
+    By default, this is [`ghcr.io/iron-fish/ironfish:latest`]
+
+*   **`FISHTANK_NODE_ARGS`:** Extra command-line arguments to add to the
+    `ironfish start` command.
+
+*   **`FISHTANK_SCENARIOS_CLEANUP`:** Whether or not to remove resources
+    created by the scenarios simulated by `yarn simulate`. By default, after
+    each scenario is run, all resources (containers, virtual networks, files,
+    ...) for that scenario are destroyed; this option may be set to `true` to
+    keep all resources for later inspection.
+
+
+[`ghcr.io/iron-fish/ironfish:latest`]: https://github.com/iron-fish/ironfish/pkgs/container/ironfish

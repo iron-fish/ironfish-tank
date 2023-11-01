@@ -185,6 +185,12 @@ describe('Cluster', () => {
   })
 
   describe('spawn', () => {
+    beforeEach(() => {
+      // Ensure that tests are not affected by the current environment
+      delete process.env.FISHTANK_NODE_IMAGE
+      delete process.env.FISHTANK_NODE_ARGS
+    })
+
     afterEach(async () => {
       return promises.rm(join(tmpdir(), 'fishtank', 'my-test-cluster'), {
         force: true,
@@ -337,6 +343,28 @@ describe('Cluster', () => {
           .then(JSON.parse),
       ).toMatchObject({
         networkId: 2,
+      })
+    })
+
+    it('respects user configuration passed through environment variables', async () => {
+      process.env.FISHTANK_NODE_IMAGE = 'some-random-image-name:version'
+      process.env.FISHTANK_NODE_ARGS = '--foo --bar="baz qux"'
+
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+      await cluster.spawn({ name: 'my-test-container' })
+
+      expect(runDetached).toHaveBeenCalledWith('some-random-image-name:version', {
+        args: ['start', '--foo', '--bar=baz qux'],
+        name: 'my-test-cluster_my-test-container',
+        networks: ['my-test-cluster'],
+        hostname: 'my-test-container',
+        ports: { tcp: [8020] },
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+        volumes: getVolumes('my-test-cluster', 'my-test-container'),
       })
     })
   })

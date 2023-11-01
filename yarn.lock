@@ -8826,6 +8826,11 @@ shell-quote@^1.7.3:
   resolved "https://registry.yarnpkg.com/shell-quote/-/shell-quote-1.8.1.tgz#6dbf4db75515ad5bac63b4f1894c3a154c766680"
   integrity sha512-6j1W9l1iAs/4xYBI1SYOVZyFcCis9b4KCLQ8fgAGG07QvzaRLVVRQvAy85yNmmZSjYjg4MWh4gNvlPujU/5LpA==
 
+shell-split@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/shell-split/-/shell-split-1.0.0.tgz#ad0708af9e1d413b60c99f4c38c6f6a68f00a1a1"
+  integrity sha512-BtLZmM1cw526/KegtJlBV21RdNEKweM0UuGKHEJPOi2GTByOw5T8N2L0dYC5P25z6wLAP3rm0W7kvm0e1MybVg==
+
 shelljs@^0.8.5:
   version "0.8.5"
   resolved "https://registry.yarnpkg.com/shelljs/-/shelljs-0.8.5.tgz#de055408d8361bed66c669d2f000538ced8ee20c"

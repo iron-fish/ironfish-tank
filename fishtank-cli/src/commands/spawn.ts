@@ -3,7 +3,7 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { Command, Config } from '@oclif/core'
 import { Flags } from '@oclif/core'
-import { Cluster, DEFAULT_IMAGE } from 'fishtank'
+import { Cluster, DEFAULT_NODE_IMAGE } from 'fishtank'
 
 export abstract class Spawn extends Command {
   static description = 'Spin up a new node inside a cluster'
@@ -25,7 +25,7 @@ export abstract class Spawn extends Command {
     image: Flags.string({
       char: 'i',
       required: false,
-      default: DEFAULT_IMAGE,
+      default: DEFAULT_NODE_IMAGE,
       description: 'The name of the Docker image to use to spawn the container',
     }),
   }

@@ -6,10 +6,10 @@ import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
 import { Docker, Labels } from './backend'
+import { getConfig } from './config'
 import * as naming from './naming'
 import { DEFAULT_WAIT_TIMEOUT, INTERNAL_RPC_TCP_PORT, Node } from './node'
 
-export const DEFAULT_IMAGE = 'ghcr.io/iron-fish/ironfish:latest'
 export const DEFAULT_BOOTSTRAP_NODE_NAME = 'bootstrap'
 export const CLUSTER_LABEL = 'fishtank.cluster'
 export const NODE_ROLE_LABEL = 'fishtank.node.role'
@@ -104,7 +104,7 @@ export class Cluster {
     const containerName = naming.containerName(this, options.name)
 
     const runOptions = {
-      args: ['start', ...(options.extraArgs ?? [])],
+      args: ['start', ...getConfig().extraStartArgs, ...(options.extraArgs ?? [])],
       name: containerName,
       networks: [naming.networkName(this)],
       hostname: options.name,
@@ -140,7 +140,7 @@ export class Cluster {
       runOptions.args.push('--customNetwork', resolve(CONTAINER_DATADIR, 'customNetwork.json'))
     }
 
-    await this.backend.runDetached(options.image ?? DEFAULT_IMAGE, runOptions)
+    await this.backend.runDetached(options.image ?? getConfig().defaultImage, runOptions)
 
     if (options.waitForStart ?? true) {
       await node.waitForStart()

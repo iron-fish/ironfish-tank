@@ -21,6 +21,7 @@
     "node": "18.x"
   },
   "dependencies": {
+    "shell-split": "^1.0.0"
   },
   "devDependencies": {
   },
