@@ -4,6 +4,7 @@
 import * as child_process from 'child_process'
 import { ChildProcess, ExecFileOptions } from 'child_process'
 import { promisify } from 'util'
+import { sleep } from '../waitLoop'
 
 const DEFAULT_COMMAND = 'docker'
 
@@ -221,6 +222,16 @@ export class Docker {
     }
     rmArgs.push(...containers)
     await this.cmd(rmArgs, {})
+
+    while (true) {
+      const alive = new Set((await this.list()).map((item) => item.name))
+      const notRemoved = containers.filter((name) => alive.has(name))
+      if (notRemoved.length === 0) {
+        break
+      }
+      console.log('wait rm')
+      await sleep(200)
+    }
   }
 
   async createNetwork(
