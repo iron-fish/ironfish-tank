@@ -7,5 +7,6 @@ const pkg = require('./package.json')
 module.exports = {
   ...base,
   displayName: pkg.name,
-  testMatch: ['**/*.simulation.ts', '**/*.test.ts']
+  testMatch: ['**/*.simulation.ts', '**/*.test.ts'],
+  globalSetup: './build/src/setup.js',
 }

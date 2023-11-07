@@ -77,6 +77,16 @@ export class Cluster {
     ).map((container) => new Node(this, container.name.slice(this.name.length + 1)))
   }
 
+  async getNodeVersion(options?: { image?: string }): Promise<string> {
+    const image = options?.image ?? getConfig().defaultImage
+    const { stdout } = await this.backend.run(image, {
+      args: ['version'],
+      name: naming.containerName(this, 'version'),
+      labels: { [CLUSTER_LABEL]: this.name },
+    })
+    return stdout
+  }
+
   async spawn(options: {
     name: string
     image?: string
