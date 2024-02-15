@@ -18,7 +18,7 @@
     "/npm-shrinkwrap.json"
   ],
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "dependencies": {
     "fishtank": "0.1.0"
@@ -29,7 +29,7 @@
     "build": "tsc -b",
     "lint": "tsc -b && eslint --ext .ts,.tsx,.js,.jsx src/",
     "lint:fix": "tsc -b && eslint --ext .ts,.tsx,.js,.jsx src/ --fix",
-    "simulate": "tsc -b && tsc -b tsconfig.test.json && jest --verbose --runInBand --testTimeout=${JEST_TIMEOUT:-1800000} --forceExit",
+    "simulate": "tsc -b && tsc -b tsconfig.test.json && NODE_OPTIONS=--experimental-vm-modules jest --verbose --runInBand --testTimeout=${JEST_TIMEOUT:-1800000} --forceExit",
     "clean": "rimraf build"
   },
   "bugs": {
