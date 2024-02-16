@@ -55,7 +55,7 @@ export const withTestCluster = (
 export const getNetworkDefinition = (
   consensus?: Partial<ConsensusParameters>,
 ): NetworkDefinition => {
-  const networkDefinition = JSON.parse(DEVNET) as NetworkDefinition
+  const networkDefinition = { ...DEVNET }
   networkDefinition.id = 123
   networkDefinition.genesis.header.target = Target.maxTarget().asBigInt().toString()
   if (consensus) {

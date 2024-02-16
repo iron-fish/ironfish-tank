@@ -1,7 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { ConfigOptions } from '@ironfish/sdk'
 import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -219,12 +218,18 @@ describe('Cluster', () => {
           .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
           .then(JSON.parse),
       ).toEqual({
-        networkId: 2,
         enableRpcTcp: true,
         enableRpcTls: false,
         rpcTcpHost: '',
         preemptiveBlockMining: false,
         bootstrapNodes: ['my-bootstrap-node'],
+      })
+      expect(
+        await promises
+          .readFile(resolve(dataDir, 'internal.json'), { encoding: 'utf8' })
+          .then(JSON.parse),
+      ).toEqual({
+        networkId: 2,
       })
       expect(node.name).toEqual('my-test-container')
       expect(list).toHaveBeenCalledWith({
@@ -249,7 +254,7 @@ describe('Cluster', () => {
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const config = {
-        networkId: 123,
+        p2pStunServers: ['abc', 'def', 'ghi', 'jkl'],
       }
       await cluster.spawn({ name: 'my-test-container', config })
 
@@ -339,7 +344,7 @@ describe('Cluster', () => {
       const dataDir = getDataDir('my-test-cluster', 'my-test-container')
       expect(
         await promises
-          .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
+          .readFile(resolve(dataDir, 'internal.json'), { encoding: 'utf8' })
           .then(JSON.parse),
       ).toMatchObject({
         networkId: 2,
@@ -377,10 +382,7 @@ describe('Cluster', () => {
       jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
       jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
-      const nodeConfig: Partial<ConfigOptions> = {
-        networkId: 0,
-      }
-      await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
+      await cluster.spawn({ name: 'my-test-container' })
 
       const list = jest.spyOn(backend, 'list').mockReturnValue(
         Promise.resolve([

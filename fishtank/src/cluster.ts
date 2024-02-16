@@ -105,6 +105,7 @@ export class Cluster {
     image?: string
     config?: Partial<ConfigOptions>
     internal?: Partial<InternalOptions>
+    networkId?: number
     networkDefinition?: Partial<NetworkDefinition>
     extraArgs?: string[]
     extraLabels?: Labels
@@ -128,7 +129,6 @@ export class Cluster {
     runOptions.volumes.set(node.dataDir, CONTAINER_DATADIR)
 
     const config = options.config || {}
-    config.networkId ??= 2
     config.enableRpcTcp ??= true
     config.enableRpcTls ??= false
     config.rpcTcpHost ??= ''
@@ -136,12 +136,9 @@ export class Cluster {
 
     await promises.writeFile(resolve(node.dataDir, 'config.json'), JSON.stringify(config))
 
-    if (options.internal) {
-      await promises.writeFile(
-        resolve(node.dataDir, 'internal.json'),
-        JSON.stringify(options.internal),
-      )
-    }
+    const internal = options.internal || {}
+    internal.networkId ??= options.networkDefinition?.id ?? 2
+    await promises.writeFile(resolve(node.dataDir, 'internal.json'), JSON.stringify(internal))
 
     if (options.networkDefinition) {
       await promises.writeFile(
