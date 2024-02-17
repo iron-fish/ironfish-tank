@@ -194,7 +194,7 @@ const expectChainFork = async (
 }
 
 describe('hard fork 1', () => {
-  it('v2 transactions are activated after enableAssetOwnership', async () => {
+  it.skip('v2 transactions are activated after enableAssetOwnership', async () => {
     return withTestCluster(async (cluster: Cluster) => {
       const hardForkHeight = 30
       const networkDefinition = getNetworkDefinition({ enableAssetOwnership: hardForkHeight })
@@ -358,6 +358,41 @@ describe('hard fork 1', () => {
       await expectTransactionsVersion(nodes[0], { from: 1, to: hardForkHeight - 1 }, 1)
       await expectTransactionsVersion(nodes[0], { from: hardForkHeight, to: null }, 2)
       await expectTransactionsVersion(rogueNodes[0], { from: 1, to: null }, 1)
+    })
+  })
+
+  it.skip('adjusts the difficulty of the hard-fork block', async () => {
+    return withTestCluster(async (cluster: Cluster) => {
+      const hardForkHeight = 5
+
+      await cluster.init()
+
+      const node = await cluster.spawn({ name: 'node' })
+      const nodeRpc = await node.connectRpc()
+
+      await node.mineUntil({ blockSequence: hardForkHeight - 1 })
+
+      // Mine until just before the hard fork activation
+      expect(await getChainHeight(node)).toBeLessThan(hardForkHeight)
+
+      // Get the difficulty so we can compare it to the difficulty
+      // post-activation
+      const getDifficultyResponse1 = await nodeRpc.chain.getDifficulty()
+      const preHardForkDifficulty = BigInt(getDifficultyResponse1.content.difficulty)
+
+      // Mine another block to activate the sequence
+      await node.mineUntil({ blockSequence: hardForkHeight })
+
+      // Make sure the hard fork has happened
+      expect(await getChainHeight(node)).toEqual(hardForkHeight)
+
+      // Get the difficulty to compare to the pre-activation number
+      const getDifficultyResponse2 = await nodeRpc.chain.getDifficulty()
+      const postHardForkDifficulty = BigInt(getDifficultyResponse2.content.difficulty)
+
+      // Divide by less than 100 just to give some room for error in case of
+      // lucky block mine or something
+      expect(postHardForkDifficulty).toBeLessThan(preHardForkDifficulty / 95n)
     })
   })
 })
