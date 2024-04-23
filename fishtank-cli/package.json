@@ -20,7 +20,7 @@
     "/oclif.manifest.json"
   ],
   "engines": {
-    "node": "18.x"
+    "node": "20.x"
   },
   "dependencies": {
     "@oclif/core": "1.23.1",
@@ -51,10 +51,10 @@
     "build": "tsc -b",
     "lint": "tsc -b && eslint --ext .ts,.tsx,.js,.jsx src/",
     "lint:fix": "tsc -b && eslint --ext .ts,.tsx,.js,.jsx src/ --fix",
-    "start": "cross-env OCLIF_TS_NODE=0 IRONFISH_DEBUG=1 node --expose-gc --inspect=:0 --inspect-publish-uid=http --enable-source-maps bin/run",
-    "test": "yarn clean && tsc -b && tsc -b tsconfig.test.json && jest --passWithNoTests",
-    "test:coverage:html": "tsc -b tsconfig.test.json && jest --passWithNoTests --testPathIgnorePatterns --coverage --coverage-reporters html",
-    "test:watch": "tsc -b tsconfig.test.json && jest --watch --coverage false",
+    "start": "cross-env OCLIF_TS_NODE=0 IRONFISH_DEBUG=1 node --expose-gc --inspect=:0 --inspect-publish-uid=http --enable-source-maps --experimental-vm-modules bin/run",
+    "test": "yarn clean && tsc -b && tsc -b tsconfig.test.json && NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
+    "test:coverage:html": "tsc -b tsconfig.test.json && NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests --testPathIgnorePatterns --coverage --coverage-reporters html",
+    "test:watch": "tsc -b tsconfig.test.json && NODE_OPTIONS=--experimental-vm-modules jest --watch --coverage false",
     "postpack": "rimraf oclif.manifest.json",
     "clean": "rimraf build",
     "prepack": "rimraf build && yarn build && oclif manifest && oclif readme",

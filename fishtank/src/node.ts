@@ -171,7 +171,7 @@ export class Node {
               .waitForEnd()
           } catch (err) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            if (!!err && typeof err === 'object' && err.status === 404) {
+            if (!!err && typeof err === 'object' && 'status' in err && err.status === 404) {
               return false
             }
             throw err

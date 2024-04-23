@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { ConfigOptions, InternalOptions, NetworkDefinition } from '@ironfish/sdk'
+import { ConfigOptions, IJSON, InternalOptions, NetworkDefinition } from '@ironfish/sdk'
 import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -105,6 +105,7 @@ export class Cluster {
     image?: string
     config?: Partial<ConfigOptions>
     internal?: Partial<InternalOptions>
+    networkId?: number
     networkDefinition?: Partial<NetworkDefinition>
     extraArgs?: string[]
     extraLabels?: Labels
@@ -115,7 +116,7 @@ export class Cluster {
     const containerName = naming.containerName(this, options.name)
 
     const runOptions = {
-      args: ['start', ...getConfig().extraStartArgs, ...(options.extraArgs ?? [])],
+      args: ['start'],
       name: containerName,
       networks: [naming.networkName(this)],
       hostname: options.name,
@@ -127,29 +128,32 @@ export class Cluster {
     await promises.mkdir(node.dataDir, { recursive: true })
     runOptions.volumes.set(node.dataDir, CONTAINER_DATADIR)
 
-    const config = options.config || {}
-    config.networkId ??= 2
+    const config = structuredClone(options.config) || {}
     config.enableRpcTcp ??= true
     config.enableRpcTls ??= false
     config.rpcTcpHost ??= ''
     config.preemptiveBlockMining ??= false
 
-    await promises.writeFile(resolve(node.dataDir, 'config.json'), JSON.stringify(config))
+    await promises.writeFile(resolve(node.dataDir, 'config.json'), IJSON.stringify(config))
 
     if (options.internal) {
       await promises.writeFile(
         resolve(node.dataDir, 'internal.json'),
-        JSON.stringify(options.internal),
+        IJSON.stringify(options.internal),
       )
     }
 
     if (options.networkDefinition) {
       await promises.writeFile(
         resolve(node.dataDir, 'customNetwork.json'),
-        JSON.stringify(options.networkDefinition),
+        IJSON.stringify(options.networkDefinition),
       )
       runOptions.args.push('--customNetwork', resolve(CONTAINER_DATADIR, 'customNetwork.json'))
+    } else {
+      runOptions.args.push('--networkId', (options.networkId ?? 2).toString())
     }
+
+    runOptions.args.push(...getConfig().extraStartArgs, ...(options.extraArgs ?? []))
 
     await this.backend.runDetached(options.image ?? getConfig().defaultImage, runOptions)
 

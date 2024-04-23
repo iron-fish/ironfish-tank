@@ -305,7 +305,7 @@ describe('hard fork 1', () => {
       )
 
       // Spin up a few nodes that will use v1 transactions forever
-      const rogueNetworkDefinition = getNetworkDefinition({ enableAssetOwnership: 'never' })
+      const rogueNetworkDefinition = getNetworkDefinition({ enableAssetOwnership: null })
       const rogueNodes = await Promise.all(
         [...Array(numNodes).keys()].map((i) =>
           cluster.spawn({ name: `rogue-node-${i}`, networkDefinition: rogueNetworkDefinition }),

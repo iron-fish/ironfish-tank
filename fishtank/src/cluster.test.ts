@@ -1,7 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { ConfigOptions } from '@ironfish/sdk'
 import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -66,7 +65,7 @@ describe('Cluster', () => {
         labels: { 'fishtank.cluster': 'my-test-cluster' },
       })
       expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
-        args: ['start'],
+        args: ['start', '--networkId', '2'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
@@ -110,7 +109,7 @@ describe('Cluster', () => {
       await cluster.bootstrap()
 
       expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
-        args: ['start'],
+        args: ['start', '--networkId', '2'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
@@ -134,7 +133,7 @@ describe('Cluster', () => {
       await cluster.bootstrap({ initChain: false })
 
       expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
-        args: ['start'],
+        args: ['start', '--networkId', '2'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
@@ -154,7 +153,7 @@ describe('Cluster', () => {
       await cluster.bootstrap({ nodeName: 'my-bootstrap-node', initChain: false })
 
       expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
-        args: ['start'],
+        args: ['start', '--networkId', '2'],
         name: 'my-test-cluster_my-bootstrap-node',
         networks: ['my-test-cluster'],
         hostname: 'my-bootstrap-node',
@@ -173,7 +172,7 @@ describe('Cluster', () => {
       await cluster.bootstrap({ nodeImage: 'some-image', initChain: false })
 
       expect(runDetached).toHaveBeenCalledWith('some-image', {
-        args: ['start'],
+        args: ['start', '--networkId', '2'],
         name: 'my-test-cluster_bootstrap',
         networks: ['my-test-cluster'],
         hostname: 'bootstrap',
@@ -219,7 +218,6 @@ describe('Cluster', () => {
           .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
           .then(JSON.parse),
       ).toEqual({
-        networkId: 2,
         enableRpcTcp: true,
         enableRpcTls: false,
         rpcTcpHost: '',
@@ -231,7 +229,7 @@ describe('Cluster', () => {
         labels: { 'fishtank.cluster': 'my-test-cluster', 'fishtank.node.role': 'bootstrap' },
       })
       expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
-        args: ['start'],
+        args: ['start', '--networkId', '2'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
@@ -249,7 +247,7 @@ describe('Cluster', () => {
       const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
       const config = {
-        networkId: 123,
+        maxPeers: 123,
       }
       await cluster.spawn({ name: 'my-test-container', config })
 
@@ -258,9 +256,10 @@ describe('Cluster', () => {
         await promises
           .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
           .then(JSON.parse),
-      ).toEqual(config)
+      ).toMatchObject(config)
+
       expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
-        args: ['start'],
+        args: ['start', '--networkId', '2'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
@@ -289,7 +288,7 @@ describe('Cluster', () => {
           .then(JSON.parse),
       ).toEqual(internal)
       expect(runDetached).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
-        args: ['start'],
+        args: ['start', '--networkId', '2'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
@@ -333,17 +332,17 @@ describe('Cluster', () => {
       const cluster = new Cluster({ name: 'my-test-cluster', backend })
 
       jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
-      jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+      const runDetached = jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
+
       await cluster.spawn({ name: 'my-test-container' })
 
-      const dataDir = getDataDir('my-test-cluster', 'my-test-container')
-      expect(
-        await promises
-          .readFile(resolve(dataDir, 'config.json'), { encoding: 'utf8' })
-          .then(JSON.parse),
-      ).toMatchObject({
-        networkId: 2,
-      })
+      expect(runDetached).toHaveBeenCalledWith(
+        'ghcr.io/iron-fish/ironfish:latest',
+        expect.objectContaining({
+          args: ['start', '--networkId', '2'],
+          name: 'my-test-cluster_my-test-container',
+        }),
+      )
     })
 
     it('respects user configuration passed through environment variables', async () => {
@@ -358,7 +357,7 @@ describe('Cluster', () => {
       await cluster.spawn({ name: 'my-test-container' })
 
       expect(runDetached).toHaveBeenCalledWith('some-random-image-name:version', {
-        args: ['start', '--foo', '--bar=baz qux'],
+        args: ['start', '--networkId', '2', '--foo', '--bar=baz qux'],
         name: 'my-test-cluster_my-test-container',
         networks: ['my-test-cluster'],
         hostname: 'my-test-container',
@@ -377,10 +376,7 @@ describe('Cluster', () => {
       jest.spyOn(backend, 'list').mockReturnValue(Promise.resolve([]))
       jest.spyOn(backend, 'runDetached').mockReturnValue(Promise.resolve())
 
-      const nodeConfig: Partial<ConfigOptions> = {
-        networkId: 0,
-      }
-      await cluster.spawn({ name: 'my-test-container', config: nodeConfig })
+      await cluster.spawn({ name: 'my-test-container' })
 
       const list = jest.spyOn(backend, 'list').mockReturnValue(
         Promise.resolve([

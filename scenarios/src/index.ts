@@ -1,7 +1,7 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { ConsensusParameters, DEVNET, NetworkDefinition, Target } from '@ironfish/sdk'
+import { ConsensusParameters, DEVNET, IJSON, NetworkDefinition, Target } from '@ironfish/sdk'
 import { Cluster } from 'fishtank'
 import { getTestConfig } from './config'
 
@@ -55,7 +55,10 @@ export const withTestCluster = (
 export const getNetworkDefinition = (
   consensus?: Partial<ConsensusParameters>,
 ): NetworkDefinition => {
-  const networkDefinition = JSON.parse(DEVNET) as NetworkDefinition
+  // Convert DEVNET to/from JSON to create a deep copy of it. Can't use
+  // structuredClone() because structuredClone() converts Buffers to
+  // Uint8Arrays, and the latter does not play nice with the Iron Fish Node
+  const networkDefinition = IJSON.parse(IJSON.stringify(DEVNET)) as NetworkDefinition
   networkDefinition.id = 123
   networkDefinition.genesis.header.target = Target.maxTarget().asBigInt().toString()
   if (consensus) {
