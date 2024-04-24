@@ -1,8 +1,15 @@
 name: Run Scenarios
+
 on:
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * *"
+  pull_request:
+    branches:
+      - '**'
+  push:
+    branches:
+      - master
 
 jobs:
   test:
