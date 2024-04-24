@@ -193,7 +193,7 @@ const expectChainFork = async (
   }
 }
 
-describe('hard fork 1', () => {
+describe('asset ownership', () => {
   it('v2 transactions are activated after enableAssetOwnership', async () => {
     return withTestCluster(async (cluster: Cluster) => {
       const hardForkHeight = 30
