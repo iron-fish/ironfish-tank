@@ -1,7 +1,14 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
-import { ConsensusParameters, DEVNET, IJSON, NetworkDefinition, Target } from '@ironfish/sdk'
+import {
+  ConsensusParameters,
+  CurrencyUtils,
+  DEVNET,
+  IJSON,
+  NetworkDefinition,
+  Target,
+} from '@ironfish/sdk'
 import { Cluster } from 'fishtank'
 import { getTestConfig } from './config'
 
@@ -68,4 +75,64 @@ export const getNetworkDefinition = (
     }
   }
   return networkDefinition
+}
+
+/**
+ * Shortcut to spawn a temporary node and mine the given transaction (plus
+ * additional blocks until the transaction is confirmed).
+ */
+export const mineUntilTransactionConfirmed = async (options: {
+  cluster: Cluster
+  transactionHash: string
+  confirmations?: number
+}): Promise<void> => {
+  const { cluster, transactionHash } = options
+  const confirmations = options.confirmations ?? 10
+
+  const node = await cluster.spawn({ namePrefix: 'miner' })
+  await node.mineUntil({ transactionMined: transactionHash })
+  await node.mineUntil({ additionalBlocks: confirmations })
+  await node.remove()
+}
+
+/**
+ * Shortcut to spawn a temporary node, generate some $IRON, and then send the
+ * $IRON to the given address.
+ */
+export const sendIronTo = async (options: {
+  cluster: Cluster
+  publicAddress: string
+  amount: bigint
+  fee?: bigint
+  confirmations?: number
+}): Promise<void> => {
+  const { cluster, publicAddress, amount } = options
+  const fee = options.fee ?? 500n
+  const confirmations = options.confirmations ?? 10
+
+  const node = await cluster.spawn({ namePrefix: 'sender' })
+  const rpc = await node.connectRpc()
+
+  await node.mineUntil({ accountBalance: amount + fee })
+
+  const createTxResponse = await rpc.wallet.createTransaction({
+    account: 'default',
+    outputs: [
+      {
+        publicAddress,
+        amount: CurrencyUtils.encode(amount),
+      },
+    ],
+    fee: CurrencyUtils.encode(fee),
+  })
+
+  const postTxResponse = await rpc.wallet.postTransaction({
+    account: 'default',
+    transaction: createTxResponse.content.transaction,
+  })
+
+  await node.mineUntil({ transactionMined: postTxResponse.content.hash })
+  await node.mineUntil({ additionalBlocks: confirmations })
+
+  await node.remove()
 }
