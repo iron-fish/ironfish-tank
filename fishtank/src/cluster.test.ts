@@ -219,6 +219,7 @@ describe('Cluster', () => {
           .then(JSON.parse),
       ).toEqual({
         enableRpcTcp: true,
+        enableRpcIpc: false,
         enableRpcTls: false,
         rpcTcpHost: '',
         preemptiveBlockMining: false,
