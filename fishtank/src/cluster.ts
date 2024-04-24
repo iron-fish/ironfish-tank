@@ -131,6 +131,7 @@ export class Cluster {
     const config = structuredClone(options.config) || {}
     config.enableRpcTcp ??= true
     config.enableRpcTls ??= false
+    config.enableRpcIpc ??= false
     config.rpcTcpHost ??= ''
     config.preemptiveBlockMining ??= false
 
