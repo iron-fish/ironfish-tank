@@ -33,7 +33,7 @@ describe('Node', () => {
   })
 
   describe('connectRpc', () => {
-    it('connects to the node IPC socket', async () => {
+    it('connects to the node TCP socket', async () => {
       const backend = new Docker()
       const cluster = new Cluster({ name: 'my-test-cluster', backend })
       const node = new Node(cluster, 'my-test-node')
