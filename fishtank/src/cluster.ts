@@ -2,6 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 import { ConfigOptions, IJSON, InternalOptions, NetworkDefinition } from '@ironfish/sdk'
+import { randomBytes } from 'crypto'
 import { promises } from 'fs'
 import { tmpdir } from 'os'
 import { join, resolve } from 'path'
@@ -16,6 +17,10 @@ export const CLUSTER_LABEL = 'fishtank.cluster'
 export const NODE_ROLE_LABEL = 'fishtank.node.role'
 export const BOOTSTRAP_NODE_ROLE = 'bootstrap'
 export const CONTAINER_DATADIR = '/root/.ironfish'
+
+const randomNodeName = (prefix: string): string => {
+  return `${prefix}-${randomBytes(4).toString('hex')}`
+}
 
 export type BootstrapOptions = {
   nodeName?: string
@@ -87,17 +92,19 @@ export class Cluster {
     return stdout
   }
 
-  async spawn(options: {
-    name: string
-    image?: string
-    config?: Partial<ConfigOptions>
-    internal?: Partial<InternalOptions>
-    networkDefinition?: Partial<NetworkDefinition>
-    waitForStart?: boolean
-  }): Promise<Node> {
+  async spawn(
+    options: {
+      image?: string
+      config?: Partial<ConfigOptions>
+      internal?: Partial<InternalOptions>
+      networkDefinition?: Partial<NetworkDefinition>
+      waitForStart?: boolean
+    } & ({ name: string } | { namePrefix: string }),
+  ): Promise<Node> {
     const config = options.config || {}
     config.bootstrapNodes ??= (await this.getBootstrapNodes()).map((node) => node.name)
-    return this.internalSpawn({ ...options, config })
+    const name = 'name' in options ? options.name : randomNodeName(options.namePrefix)
+    return this.internalSpawn({ ...options, name, config })
   }
 
   private async internalSpawn(options: {
