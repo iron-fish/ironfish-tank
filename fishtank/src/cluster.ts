@@ -90,9 +90,11 @@ export class Cluster {
   async spawn(options: {
     name: string
     image?: string
+    command?: string
     config?: Partial<ConfigOptions>
     internal?: Partial<InternalOptions>
     networkDefinition?: Partial<NetworkDefinition>
+    extraArgs?: string[]
     waitForStart?: boolean
   }): Promise<Node> {
     const config = options.config || {}
@@ -103,6 +105,7 @@ export class Cluster {
   private async internalSpawn(options: {
     name: string
     image?: string
+    command?: string
     config?: Partial<ConfigOptions>
     internal?: Partial<InternalOptions>
     networkId?: number
@@ -116,7 +119,7 @@ export class Cluster {
     const containerName = naming.containerName(this, options.name)
 
     const runOptions = {
-      args: ['start'],
+      args: [options.command ?? 'start'],
       name: containerName,
       networks: [naming.networkName(this)],
       hostname: options.name,
