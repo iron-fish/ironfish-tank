@@ -25,7 +25,7 @@
     "typecheck:changed": "lerna exec --since origin/master --include-dependents -- tsc --noEmit"
   },
   "dependencies": {
-    "@ironfish/sdk": "2.2.0"
+    "@ironfish/sdk": "2.9.0"
   },
   "devDependencies": {
     "@types/jest": "29.2.4",
