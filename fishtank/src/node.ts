@@ -166,9 +166,7 @@ export class Node {
       if ('transactionMined' in until) {
         return async (): Promise<boolean> => {
           try {
-            await rpc.chain
-              .getTransaction({ transactionHash: until.transactionMined })
-              .waitForEnd()
+            await rpc.chain.getTransaction({ transactionHash: until.transactionMined })
           } catch (err) {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             if (!!err && typeof err === 'object' && 'status' in err && err.status === 404) {
