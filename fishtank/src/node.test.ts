@@ -219,11 +219,10 @@ describe('Node', () => {
         const cluster = new Cluster({ name: 'my-test-cluster', backend })
         const node = new Node(cluster, 'my-test-node')
 
-        const waitForEnd = jest
+        const getTransaction = jest
           .fn()
           .mockReturnValueOnce(Promise.reject({ status: 404 }))
           .mockReturnValueOnce(Promise.resolve({}))
-        const getTransaction = jest.fn().mockReturnValue({ waitForEnd })
         const rpc = { chain: { getTransaction } }
         node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
         node.getImage = jest.fn().mockReturnValue(Promise.resolve('some-image'))
@@ -246,8 +245,7 @@ describe('Node', () => {
         const cluster = new Cluster({ name: 'my-test-cluster', backend })
         const node = new Node(cluster, 'my-test-node')
 
-        const waitForEnd = jest.fn().mockReturnValue(Promise.resolve({}))
-        const getTransaction = jest.fn().mockReturnValue({ waitForEnd })
+        const getTransaction = jest.fn().mockReturnValue(Promise.resolve({}))
         const rpc = { chain: { getTransaction } }
         node.connectRpc = jest.fn().mockReturnValue(Promise.resolve(rpc))
 
