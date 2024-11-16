@@ -415,4 +415,43 @@ describe('Cluster', () => {
       })
     })
   })
+
+  describe('runNodeCommand', () => {
+    beforeEach(() => {
+      // Ensure that tests are not affected by the current environment
+      delete process.env.FISHTANK_NODE_IMAGE
+      delete process.env.FISHTANK_NODE_ARGS
+    })
+
+    afterEach(async () => {
+      return promises.rm(join(tmpdir(), 'fishtank', 'my-test-cluster'), {
+        force: true,
+        recursive: true,
+      })
+    })
+
+    it('launches a container with the default image and attached volumes', async () => {
+      const backend = new Docker()
+      const cluster = new Cluster({ name: 'my-test-cluster', backend })
+
+      const run = jest
+        .spyOn(backend, 'run')
+        .mockReturnValue(Promise.resolve({ stdout: '', stderr: '' }))
+
+      await cluster.runNodeCommand({
+        name: 'my-test-container',
+        args: ['status'],
+      })
+
+      expect(run).toHaveBeenCalledWith('ghcr.io/iron-fish/ironfish:latest', {
+        args: ['status'],
+        name: 'my-test-cluster_my-test-container',
+        networks: ['my-test-cluster'],
+        hostname: 'my-test-container',
+        ports: { tcp: [8020] },
+        labels: { 'fishtank.cluster': 'my-test-cluster' },
+        volumes: getVolumes('my-test-cluster', 'my-test-container'),
+      })
+    })
+  })
 })

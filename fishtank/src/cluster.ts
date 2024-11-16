@@ -87,6 +87,36 @@ export class Cluster {
     return stdout
   }
 
+  async runNodeCommand(options: {
+    name: string
+    args: string[]
+    image?: string
+  }): Promise<string> {
+    naming.assertValidName(options.name)
+    const node = new Node(this, options.name)
+    const containerName = naming.containerName(this, options.name)
+
+    const runOptions = {
+      args: options.args,
+      name: containerName,
+      networks: [naming.networkName(this)],
+      hostname: options.name,
+      ports: { tcp: [INTERNAL_RPC_TCP_PORT] },
+      labels: { [CLUSTER_LABEL]: this.name },
+      volumes: new Map<string, string>(),
+    }
+
+    await promises.mkdir(node.dataDir, { recursive: true })
+    runOptions.volumes.set(node.dataDir, CONTAINER_DATADIR)
+
+    const { stdout } = await this.backend.run(
+      options.image ?? getConfig().defaultImage,
+      runOptions,
+    )
+
+    return stdout
+  }
+
   async spawn(options: {
     name: string
     image?: string
