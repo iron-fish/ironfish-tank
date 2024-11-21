@@ -5,7 +5,7 @@ import { createRootLogger, IronfishSdk, Logger, RpcSocketClient } from '@ironfis
 import { randomBytes } from 'crypto'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { Docker } from './backend'
+import { Docker, RunOptions } from './backend'
 import { Cluster, CLUSTER_LABEL, CONTAINER_DATADIR } from './cluster'
 import * as naming from './naming'
 import { DEFAULT_POLL_INTERVAL, loopWithTimeout, Readiness, sleep } from './waitLoop'
@@ -18,7 +18,7 @@ const randomSuffix = (): string => {
 
 const dummyLogger = (): Logger => {
   const logger = createRootLogger()
-  logger.level = -999
+  logger.level = -Infinity
   return logger
 }
 
@@ -204,27 +204,50 @@ export class Node {
     }
   }
 
+  async runCommand(options: {
+    baseName: string
+    args: readonly string[]
+    image?: string
+  }): Promise<{ stdout: string; stderr: string }> {
+    const image = options.image ?? (await this.getImage())
+    const { runOptions } = this.companionRunOptions(options)
+
+    return this.backend.run(image, runOptions)
+  }
+
   private async spawnCompanionProcess(options: {
     baseName: string
     args: readonly string[]
   }): Promise<CompanionProcess> {
+    const image = await this.getImage()
+    const { name, containerName, runOptions } = this.companionRunOptions(options)
+
+    await this.backend.runDetached(image, runOptions)
+
+    return new CompanionProcess(name, containerName, this.backend)
+  }
+
+  private companionRunOptions(options: { baseName: string; args: readonly string[] }): {
+    name: string
+    containerName: string
+    runOptions: RunOptions
+  } {
     const suffix = `${options.baseName}-${randomSuffix()}`
     const name = `${this.name}-${suffix}`
     const containerName = `${this.containerName}-${suffix}`
-    const image = await this.getImage()
     const volumes = new Map<string, string>()
     volumes.set(this.dataDir, CONTAINER_DATADIR)
 
-    await this.backend.runDetached(image, {
+    const runOptions = {
       args: options.args,
       name: containerName,
       hostname: name,
       networks: [this.networkName],
       volumes,
       labels: { [CLUSTER_LABEL]: this.cluster.name },
-    })
+    }
 
-    return new CompanionProcess(name, containerName, this.backend)
+    return { name, containerName, runOptions }
   }
 
   remove(): Promise<void> {
